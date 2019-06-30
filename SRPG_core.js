@@ -2431,7 +2431,7 @@
     
     //特殊射程の処理
     Game_CharacterBase.prototype.srpgRangeExtention = function(x, y, oriX, oriY, skill) {
-        switch (skill.meta.specialRange) {
+        switch (skill && skill.meta.specialRange) {
         case 'line': 
             if (x == oriX || y == oriY) {
                 return true;
@@ -2446,6 +2446,7 @@
             }
         default:
             return true;
+        }
     };
 
     //攻撃射程の計算
