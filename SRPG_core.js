@@ -5825,7 +5825,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                 SceneManager.pop();
                 this._phase = null;
             } else if (this._srpgBattleResultWindow.isChangeExp() == false &&
-                Input.isPressed('ok') || TouchInput.isPressed()) {
+                (Input.isPressed('ok') || TouchInput.isPressed())) {
                 this.endBattle(3);
             }
         } else {
