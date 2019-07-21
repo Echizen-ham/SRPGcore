@@ -1,11 +1,12 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.20
+// バージョン   : 1.21
 // 最終更新日   : 2019/7/14
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
 //                エビ様　http://www.zf.em-net.ne.jp/~ebi-games/
+//                Tsumio様
 //-----------------------------------------------------------------------------
 // copyright 2017 - 2019 Lemon slice all rights reserved.
 // Released under the MIT license.
@@ -1254,6 +1255,10 @@
             var battlerArray = $gameSystem.EventToUnit(event.eventId());
             if (battlerArray && battlerArray[0] === 'actor' && battlerArray[1].isAlive()) {
                 $gameSystem.aliveActorIdList.push(event.eventId());
+                battlerArray[1].SRPGActionTimesSet();
+            }
+            if (battlerArray && battlerArray[0] === 'enemy' && battlerArray[1].isAlive()) {
+                battlerArray[1].SRPGActionTimesSet();
             }
         });
         this.aliveActorIdList.sort(function(a, b) {
@@ -1272,7 +1277,6 @@
     Game_System.prototype.srpgStartAutoActorTurn = function() {
         this.setBattlePhase('auto_actor_phase');
         this.setSubBattlePhase('auto_actor_command');
-        this.setAutoUnitId(1);
     };
 
     //エネミーターンの開始
@@ -1285,7 +1289,6 @@
         });
         this.setBattlePhase('enemy_phase');
         this.setSubBattlePhase('enemy_command');
-        this.setAutoUnitId(1);
     };
 
     //ターン終了
@@ -1580,6 +1583,7 @@
         this._battleMode = 'normal';
         this._searchItem = false;
         this._targetId = -1;
+        this._SRPGActionTimes = 1;
     };
 
     // 行動モードの設定
@@ -1613,7 +1617,22 @@
         return this._targetId;
     };
 
-    // 行動回数の設定
+    // 行動回数を設定する（SRPG用）
+    Game_Battler.prototype.SRPGActionTimesSet = function() {
+        this._SRPGActionTimes = _SRPG_Game_Battler_makeActionTimes.call(this);
+    };
+
+    // 行動回数を返す
+    Game_Battler.prototype.SRPGActionTimes = function() {
+        return this._SRPGActionTimes;
+    };
+
+    // 行動回数を消費する
+    Game_Battler.prototype.useSRPGActionTimes = function(num) {
+        this._SRPGActionTimes -= num;
+    };
+
+    // 行動回数の設定（戦闘用）
     var _SRPG_Game_Battler_makeActionTimes = Game_Battler.prototype.makeActionTimes;
     Game_Battler.prototype.makeActionTimes = function() {
         if ($gameSystem.isSRPGMode() == true) {
@@ -4764,7 +4783,12 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     Scene_Map.prototype.srpgAfterAction = function() {
         var battler = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId())[1];
         battler.srpgCheckFloorEffect($gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY());
-        battler.setSrpgTurnEnd(true);
+        if (battler.SRPGActionTimes() <= 1) {
+            battler.setSrpgTurnEnd(true);
+        } else {
+            battler.useSRPGActionTimes(1);
+        }
+        
         $gameSystem.clearSrpgActorCommandWindowNeedRefresh();
         $gameSystem.clearSrpgActorCommandStatusWindowNeedRefresh();
         $gameTemp.clearMoveTable();
@@ -4953,6 +4977,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                     } else {
                         $gameTemp.setActiveEvent(event);
                         actor.onAllActionsEnd();
+                        actor.useSRPGActionTimes(99);
                         this.srpgAfterAction();
                     }
                 }
@@ -4994,44 +5019,45 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 
     //自動行動アクターの行動決定
     Scene_Map.prototype.srpgInvokeAutoActorCommand = function() {
-        var id = $gameSystem.isAutoUnitId();
-        if (id > $gameMap.isMaxEventId()) {
-            $gameSystem.srpgStartEnemyTurn(); // エネミーターンの開始
-            return;
-        }
-        $gameSystem.setAutoUnitId(id + 1);
-        var event = $gameMap.event(id);
-        if (event && event.isType() === 'actor') {
-            var actor = $gameSystem.EventToUnit(event.eventId())[1];
-            if (actor && actor.canMove() == true && !actor.srpgTurnEnd()) {
-                actor.makeActions();
-                if (actor.isConfused()) {
-                    actor.makeConfusionActions();
-                }
-                if (_srpgStandUnitSkip === 'true' && actor.battleMode() === 'stand') {
-                    var targetType = this.makeTargetType(actor, 'actor');
-                    $gameTemp.setActiveEvent(event);
-                    $gameSystem.srpgMakeMoveTable(event);
-                    var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
-                    $gameTemp.clearMoveTable();
-                    if (canAttackTargets.length === 0) {
-                        $gameTemp.setActiveEvent(event);
-                        actor.onAllActionsEnd();
-                        this.srpgAfterAction();
-                        return;
-                    }
-                }
-                if (actor.action(0).item()) {
-                    $gameTemp.setAutoMoveDestinationValid(true);
-                    $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
-                    $gameTemp.setActiveEvent(event);
-                    $gameSystem.setSubBattlePhase('auto_actor_move');
-                } else {
-                    $gameTemp.setActiveEvent(event);
-                    actor.onAllActionsEnd();
-                    this.srpgAfterAction();
+        for (var i = 1; i <= $gameMap.isMaxEventId() + 1; i++) {
+            var event = $gameMap.event(i);
+            if (event && event.isType() === 'actor') {
+                var actor = $gameSystem.EventToUnit(event.eventId())[1];
+                if (actor && actor.canMove() == true && !actor.srpgTurnEnd()) {
+                    break;
                 }
             }
+            if (i > $gameMap.isMaxEventId()) {
+                $gameSystem.srpgStartEnemyTurn(); // エネミーターンの開始
+                return;
+            }
+        }
+        actor.makeActions();
+        if (actor.isConfused()) {
+            actor.makeConfusionActions();
+        }
+        if (_srpgStandUnitSkip === 'true' && actor.battleMode() === 'stand') {
+            var targetType = this.makeTargetType(actor, 'actor');
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.srpgMakeMoveTable(event);
+            var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
+            $gameTemp.clearMoveTable();
+            if (canAttackTargets.length === 0) {
+                $gameTemp.setActiveEvent(event);
+                actor.onAllActionsEnd();
+                this.srpgAfterAction();
+                return;
+            }
+        }
+        if (actor.action(0).item()) {
+            $gameTemp.setAutoMoveDestinationValid(true);
+            $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.setSubBattlePhase('auto_actor_move');
+        } else {
+            $gameTemp.setActiveEvent(event);
+            actor.onAllActionsEnd();
+            this.srpgAfterAction();
         }
     };
 
@@ -5059,41 +5085,42 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 
     //エネミーの行動決定
     Scene_Map.prototype.srpgInvokeEnemyCommand = function() {
-        var id = $gameSystem.isAutoUnitId();
-        if (id > $gameMap.isMaxEventId()) {
-            $gameSystem.srpgTurnEnd(); // ターンを終了する
-            return;
-        }
-        $gameSystem.setAutoUnitId(id + 1);
-        var event = $gameMap.event(id);
-        if (event && event.isType() === 'enemy') {
-            var enemy = $gameSystem.EventToUnit(event.eventId())[1];
-            if (enemy.canMove() == true && !enemy.srpgTurnEnd()) {
-                enemy.makeSrpgActions();
-                if (_srpgStandUnitSkip === 'true' && enemy.battleMode() === 'stand') {
-                    var targetType = this.makeTargetType(enemy, 'enemy');
-                    $gameTemp.setActiveEvent(event);
-                    $gameSystem.srpgMakeMoveTable(event);
-                    var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
-                    $gameTemp.clearMoveTable();
-                    if (canAttackTargets.length === 0) {
-                        $gameTemp.setActiveEvent(event);
-                        enemy.onAllActionsEnd();
-                        this.srpgAfterAction();
-                        return;
-                    }
-                }
-                if (enemy.action(0).item()) {
-                    $gameTemp.setAutoMoveDestinationValid(true);
-                    $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
-                    $gameTemp.setActiveEvent(event);
-                    $gameSystem.setSubBattlePhase('enemy_move');
-                } else {
-                    $gameTemp.setActiveEvent(event);
-                    enemy.onAllActionsEnd();
-                    this.srpgAfterAction();
+        for (var i = 1; i <= $gameMap.isMaxEventId() + 1; i++) {
+            var event = $gameMap.event(i);
+            if (event && event.isType() === 'enemy') {
+                var enemy = $gameSystem.EventToUnit(event.eventId())[1];
+                if (enemy.canMove() == true && !enemy.srpgTurnEnd()) {
+                    break;
                 }
             }
+            if (i > $gameMap.isMaxEventId()) {
+                $gameSystem.srpgTurnEnd(); // ターンを終了する
+                return;
+            }
+        }
+        enemy.makeSrpgActions();
+        if (_srpgStandUnitSkip === 'true' && enemy.battleMode() === 'stand') {
+            var targetType = this.makeTargetType(enemy, 'enemy');
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.srpgMakeMoveTable(event);
+            var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
+            $gameTemp.clearMoveTable();
+            if (canAttackTargets.length === 0) {
+                $gameTemp.setActiveEvent(event);
+                enemy.onAllActionsEnd();
+                this.srpgAfterAction();
+                return;
+            }
+        }
+        if (enemy.action(0).item()) {
+            $gameTemp.setAutoMoveDestinationValid(true);
+            $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.setSubBattlePhase('enemy_move');
+        } else {
+            $gameTemp.setActiveEvent(event);
+            enemy.onAllActionsEnd();
+            this.srpgAfterAction();
         }
     };
 
