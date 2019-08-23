@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.21
-// 最終更新日   : 2019/7/14
+// バージョン   : 1.22
+// 最終更新日   : 2019/8/23
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
@@ -149,6 +149,7 @@
  *   <type:actor>       # set this event to actor(use this note with <id:X>).
  *   <type:enemy>       # set this event to enemy(use this note with <id:X>).
  *   <id:X>             # set this event to ID X actor / enemy.
+ *   <SearchItem:true>  # if the event is an actor, if there is a unit event, it will move to it preferentially (only once).
  *
  *   <mode:normal>      # set this unit's acting pattern 'normal'(if you don't set mode, set 'normal' automatically).
  *   <mode:stand>       # set this unit's acting pattern 'stand if enemy don't near by'.
@@ -369,6 +370,7 @@
  *   <type:actor>       # そのイベントはアクターになります(<id:X>を組み合わせて使います)。
  *   <type:enemy>       # そのイベントはエネミーになります(<id:X>を組み合わせて使います)。
  *   <id:X>             # そのイベントはXで指定したIDのアクター／エネミーになります(Xは半角数字）。
+ *   <SearchItem:true>  # そのイベントがアクターの場合、ユニットイベントがある場合は優先してそこに移動するようになります（1度だけ）。
  *
  *   <mode:normal>      # そのユニットの行動パターンを「通常」に設定します（設定しない場合、自動で「通常」になります）。
  *   <mode:stand>       # そのユニットの行動パターンを「相手が近づくまで待機」に設定します。
@@ -2465,8 +2467,14 @@
     };
     
     //特殊射程の処理
-    Game_CharacterBase.prototype.srpgRangeExtention = function(x, y, oriX, oriY, skill) {
+    Game_CharacterBase.prototype.srpgRangeExtention = function(x, y, oriX, oriY, skill, range) {
         switch (skill && skill.meta.specialRange) {
+        case 'king': 
+            if ((Math.abs(x - oriX) <= range / 2) && (Math.abs(y - oriY) <= range / 2)) {
+                return true;
+            } else {
+                return false;
+            }
         case 'queen': 
             if ((x == oriX || y == oriY) || (Math.abs(x - oriX) == Math.abs(y - oriY))) {
                 return true;
@@ -2505,7 +2513,7 @@
         if (route[route.length - 1] != 2) {
             if (this.srpgRangeCanPass(x, y, 8)) {
                 //if ($gameTemp.RangeTable(x, $gameMap.roundY(y - 1))[0] < range - 1) {
-                    if (this.srpgRangeExtention(x, $gameMap.roundY(y - 1), oriX, oriY, skill) == true) {
+                    if (this.srpgRangeExtention(x, $gameMap.roundY(y - 1), oriX, oriY, skill, range + route.length - 1) == true) {
                         if ($gameTemp.MoveTable(x, $gameMap.roundY(y - 1))[0] < 0 && $gameTemp.RangeTable(x, $gameMap.roundY(y - 1))[0] < 0) {
                             $gameTemp.pushRangeList([x, $gameMap.roundY(y - 1), true]);
                         }
@@ -2519,7 +2527,7 @@
         if (route[route.length - 1] != 4) {
             if (this.srpgRangeCanPass(x, y, 6)) {
                 //if ($gameTemp.RangeTable($gameMap.roundX(x + 1), y)[0] < range - 1) {
-                    if (this.srpgRangeExtention($gameMap.roundX(x + 1), y, oriX, oriY, skill) == true) {
+                    if (this.srpgRangeExtention($gameMap.roundX(x + 1), y, oriX, oriY, skill, range + route.length - 1) == true) {
                         if ($gameTemp.MoveTable($gameMap.roundX(x + 1), y)[0] < 0 && $gameTemp.RangeTable($gameMap.roundX(x + 1), y)[0] < 0) {
                             $gameTemp.pushRangeList([$gameMap.roundX(x + 1), y, true]);
                         }
@@ -2533,7 +2541,7 @@
         if (route[route.length - 1] != 6) {
             if (this.srpgRangeCanPass(x, y, 4)) {
                 //if ($gameTemp.RangeTable($gameMap.roundX(x - 1), y)[0] < range - 1) {
-                    if (this.srpgRangeExtention($gameMap.roundX(x - 1), y, oriX, oriY, skill) == true) {
+                    if (this.srpgRangeExtention($gameMap.roundX(x - 1), y, oriX, oriY, skill, range + route.length - 1) == true) {
                         if ($gameTemp.MoveTable($gameMap.roundX(x - 1), y)[0] < 0 && $gameTemp.RangeTable($gameMap.roundX(x - 1), y)[0] < 0) {
                             $gameTemp.pushRangeList([$gameMap.roundX(x - 1), y, true]);
                         }
@@ -2547,7 +2555,7 @@
         if (route[route.length - 1] != 8) {
             if (this.srpgRangeCanPass(x, y, 2)) {
                 //if ($gameTemp.RangeTable(x, $gameMap.roundY(y + 1))[0] < range - 1) {
-                    if (this.srpgRangeExtention(x, $gameMap.roundY(y + 1), oriX, oriY, skill) == true) {
+                    if (this.srpgRangeExtention(x, $gameMap.roundY(y + 1), oriX, oriY, skill, range + route.length - 1) == true) {
                         if ($gameTemp.MoveTable(x, $gameMap.roundY(y + 1))[0] < 0 && $gameTemp.RangeTable(x, $gameMap.roundY(y + 1))[0] < 0) {
                             $gameTemp.pushRangeList([x, $gameMap.roundY(y + 1), true]);
                         }
@@ -2716,7 +2724,9 @@
                                     if (_srpgPredictionWindowMode != 3) $gameSystem.setSrpgStatusWindowNeedRefresh(actionBattlerArray);
                                     $gameSystem.setSrpgBattleWindowNeedRefresh(actionBattlerArray, targetBattlerArray);
                                     $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), event));
-                                    $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention(event.posX(), event.posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), actionBattlerArray[1].currentAction().item()));
+                                    var skill = actionBattlerArray[1].currentAction().item();
+                                    var range = actionBattlerArray[1].srpgSkillRange(skill);
+                                    $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention(event.posX(), event.posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill, range));
                                     $gameTemp.setTargetEvent(event);
                                     $gameSystem.setSubBattlePhase('battle_window');
                                 }
@@ -5307,7 +5317,8 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 
     // 最適移動位置の探索
     Scene_Map.prototype.srpgSearchOptimalPos = function(targetEvent, battler, type) {
-        if ($gameTemp.isSrpgBestSearchRoute()[0]) {
+        if ($gameTemp.isSrpgBestSearchRoute()[0] && 
+            !(battler.battleMode() === 'absRegionUp' || battler.battleMode() === 'absRegionDown')) {
             var route = $gameTemp.isSrpgBestSearchRoute()[1].slice(1, battler.srpgMove() + 1);
             for (var i = 0; i < battler.srpgMove() + 1; i++) {
                 var pos = [$gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY()];
@@ -5322,6 +5333,16 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                     } else if (d == 8) {
                         pos[1] -= 1;
                     }
+                }
+                if (pos[0] < 0) {
+                  pos[0] += $gameMap.width();
+                } else if (pos[0] >= $gameMap.width()) {
+                  pos[0] -= $gameMap.width();
+                }
+                if (pos[1] < 0) {
+                  pos[1] += $gameMap.height();
+                } else if (pos[1] >= $gameMap.height()) {
+                  pos[1] -= $gameMap.height();
                 }
                 if ($gameSystem.areTheyNoUnits(pos[0], pos[1], $gameTemp.activeEvent().isType()) == true) {
                     break;
@@ -5390,7 +5411,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                     }
                     var dis = minDisX + minDisY;
                     var check = range - dis;
-                    var specialRange = $gameTemp.activeEvent().srpgRangeExtention(targetEvent.posX(), targetEvent.posY(), pos[0], pos[1], skill);
+                    var specialRange = $gameTemp.activeEvent().srpgRangeExtention(targetEvent.posX(), targetEvent.posY(), pos[0], pos[1], skill, range);
                     if (check === optimalDis && specialRange == true) {
                         candidatePos.push([pos[0], pos[1]]);
                     } else if (check === 0 && minRange <= dis && specialRange == true) {
@@ -5461,8 +5482,9 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         var actionArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
         var targetArray = $gameSystem.EventToUnit($gameTemp.targetEvent().eventId());
         var skill = actionArray[1].currentAction().item();
+        var range = actionArray[1].srpgSkillRange(skill);
         $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), $gameTemp.targetEvent()));
-        $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill));
+        $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill, range));
         if (actionArray[1].canUse(skill)) {
             $gameTemp.setAutoMoveDestinationValid(true);
             $gameTemp.setAutoMoveDestination($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY());
