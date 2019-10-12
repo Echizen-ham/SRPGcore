@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.22
-// 最終更新日   : 2019/8/23
+// バージョン   : 1.23
+// 最終更新日   : 2019/10/12
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
@@ -108,6 +108,18 @@
  * @param textSrpgWait
  * @desc name of stand. use in SRPG state window.
  * @default Stand
+ *
+ * @param textSrpgWinLoseCondition
+ * @desc A term used to describe the win / loss conditions. It is displayed in the menu command window.
+ * @default win / loss conditions
+ *
+ * @param textSrpgWinCondition
+ * @desc A term used to describe the win conditions. It is displayed in the win / loss conditions window.
+ * @default win conditions
+ *
+ * @param textSrpgLoseCondition
+ * @desc A term used to describe the loss conditions. It is displayed in the win / loss conditions window.
+ * @default loss conditions
  *
  * @param textSrpgTurnEnd
  * @desc name of turn end. use in menu window.
@@ -231,6 +243,9 @@
  *   this.unitAddState(EventId, StateId);# Add the state of the ID specified to the unit with the specified event ID.
  *   this.turnEnd();                     # End player's turn(Same 'Turn End' in menu).
  *   this.isSubPhaseNormal(SwitchID);    # Whether the player selects the unit to be operated (ON is the same as when the menu can be opened). 
+ *   $gameSystem.clearSrpgWinLoseCondition();    # Reset the win / loss conditions. Execute before setting a new condition.
+ *   $gameSystem.setSrpgWinCondition('text');    # Set win conditions. If you want to describe multiple conditions, execute it multiple times.
+ *   $gameSystem.setSrpgLoseCondition('text');   # Set lose conditions. If you want to describe multiple conditions, execute it multiple times.
  *
  */
 
@@ -286,6 +301,10 @@
  * @desc アクターコマンドに『装備』を追加します。(true / false)
  * @default true
  *
+ * @param srpgWinLoseConditionCommand
+ * @desc メニューコマンドに『勝敗条件』を追加します。(true / false)
+ * @default true
+ *
  * @param srpgBattleEndAllHeal
  * @desc 戦闘終了後に自動的に味方全員を全回復します。falseだと自動回復しません。(true / false)
  * @default true
@@ -329,6 +348,18 @@
  * @param textSrpgWait
  * @desc 待機を表す用語です。アクターコマンドウィンドウで表示されます。
  * @default 待機
+ *
+ * @param textSrpgWinLoseCondition
+ * @desc 勝敗条件を表す用語です。メニューコマンドウィンドウで表示されます。
+ * @default 勝敗条件
+ *
+ * @param textSrpgWinCondition
+ * @desc 勝利条件を表す用語です。勝敗条件ウィンドウで表示されます。
+ * @default 勝敗条件
+ *
+ * @param textSrpgLoseCondition
+ * @desc 敗北条件を表す用語です。勝敗条件ウィンドウで表示されます。
+ * @default 勝敗条件
  *
  * @param textSrpgTurnEnd
  * @desc ターン終了を表す用語です。メニュー画面で表示されます。
@@ -450,6 +481,9 @@
  *   this.unitAddState(EventId, StateId);# 指定したイベントＩＤのユニットに指定したＩＤのステートを付与します。
  *   this.turnEnd();                     # プレイヤーのターンを終了します（メニューの「ターン終了」と同じ機能）
  *   this.isSubPhaseNormal(SwitchID);    # 操作するユニットを選択する状態かをスイッチに格納します（ONだとメニューが開ける状態と同じ）。
+ *   $gameSystem.clearSrpgWinLoseCondition();    # 勝敗条件をリセットします。新しい条件を設定する前に実行してください。
+ *   $gameSystem.setSrpgWinCondition('text');    # 勝利条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
+ *   $gameSystem.setSrpgLoseCondition('text');   # 敗北条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
  *
  */
 
@@ -481,6 +515,10 @@
     var _srpgAutoBattleStateId = Number(parameters['srpgAutoBattleStateId'] || 14);
     var _srpgBestSearchRouteSize = Number(parameters['srpgBestSearchRouteSize'] || 20);
     var _srpgDamageDirectionChange = parameters['srpgDamageDirectionChange'] || 'true';
+    var _srpgWinLoseConditionCommand = parameters['srpgWinLoseConditionCommand'] || 'true';
+    var _textSrpgWinLoseCondition = parameters['textSrpgWinLoseCondition'] || '勝敗条件';
+    var _textSrpgWinCondition = parameters['textSrpgWinCondition'] || '勝利条件';
+    var _textSrpgLoseCondition = parameters['textSrpgLoseCondition'] || '敗北条件';
 
     var _Game_Interpreter_pluginCommand =
             Game_Interpreter.prototype.pluginCommand;
@@ -830,6 +868,7 @@
         this._SrpgActorCommandStatusWindowRefreshFlag = [false, null];
         this._srpgAllActors = []; //SRPGモードに参加する全てのアクターの配列
         this._searchedItemList = [];
+        this._winLoseCondition = [];
     };
 
 //変数関係の処理
@@ -960,6 +999,26 @@
     // 行動中アクターの簡易ステータスウィンドウのリフレッシュフラグをクリアする
     Game_System.prototype.clearSrpgActorCommandStatusWindowNeedRefresh = function() {
         this._SrpgActorCommandStatusWindowRefreshFlag = [false, null];
+    };
+
+    // 勝敗条件の内容を返す
+    Game_System.prototype.srpgWinLoseCondition = function() {
+        return this._SrpgWinLoseCondition;
+    };
+
+    // 勝利条件の内容をクリアする
+    Game_System.prototype.clearSrpgWinLoseCondition = function() {
+        this._SrpgWinLoseCondition = [];
+    };
+
+    // 勝利条件の内容を設定する
+    Game_System.prototype.setSrpgWinCondition = function(text) {
+        this._SrpgWinLoseCondition.push(['win', text]);
+    };
+
+    // 敗北条件の内容を設定する
+    Game_System.prototype.setSrpgLoseCondition = function(text) {
+        this._SrpgWinLoseCondition.push(['lose', text]);
     };
 
     //戦闘に参加するアクターのリスト
@@ -3745,7 +3804,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         this._reserveTp = battler.tp;
         this._changeHp = 1;
         this._changeMp = 1;
-        this._changeTp = 1;
+        $dataSystem.optDisplayTp == true ? this._changeTp = 1 : this._changeTp = 0;
         this.refresh();
     };
 
@@ -3933,7 +3992,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 
     Window_SrpgBattleResult.prototype.drawGainExp = function(x, y) {
         var lineHeight = this.lineHeight();
-        var exp = this._rewards.exp;
+        var exp = Math.round(this._rewards.exp * $gameParty.battleMembers()[0].finalExpRate());
         var width = this.windowWidth() - this.padding * 2;
         if (exp > 0) {
             var text = TextManager.obtainExp.format(exp, TextManager.exp);
@@ -4383,6 +4442,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         if ($gameSystem.isSRPGMode() == true) {
             this.addTurnEndCommand();
             if (_srpgAutoBattleStateId > 0) this.addAutoBattleCommand();
+            if (_srpgWinLoseConditionCommand == 'true') this.addWinLoseConditionCommand();
         }
         _SRPG_Window_MenuCommand_makeCommandList.call(this);
     };
@@ -4395,6 +4455,10 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         this.addCommand(_textSrpgAutoBattle, 'autoBattle', true);
     };
 
+    Window_MenuCommand.prototype.addWinLoseConditionCommand = function() {
+        this.addCommand(_textSrpgWinLoseCondition, 'winLoseCondition', true);
+    };
+
     var _SRPG_Window_MenuCommand_isFormationEnabled = Window_MenuCommand.prototype.isFormationEnabled;
     Window_MenuCommand.prototype.isFormationEnabled = function() {
         if ($gameSystem.isSRPGMode() == true) {
@@ -4403,6 +4467,52 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
             return _SRPG_Window_MenuCommand_isFormationEnabled.call(this);
         }
     };
+
+//====================================================================
+// ●Window_WinLoseCondition
+//====================================================================
+function Window_WinLoseCondition() {
+    this.initialize.apply(this, arguments);
+}
+
+Window_WinLoseCondition.prototype = Object.create(Window_Base.prototype);
+Window_WinLoseCondition.prototype.constructor = Window_WinLoseCondition;
+
+Window_WinLoseCondition.prototype.initialize = function() {
+    Window_Base.prototype.initialize.call(this, 0, 0, Graphics.boxWidth, Graphics.boxHeight);
+    this.refresh();
+    this.openness = 0;
+};
+
+Window_WinLoseCondition.prototype.refresh = function() {
+    this.contents.clear();
+    var array = $gameSystem.srpgWinLoseCondition();
+    if (array && array.length > 0) {
+        var line = 0;
+        this.height = (array.length + 2) * this.lineHeight() + this.standardPadding() * 2;
+        this.y = Graphics.boxHeight / 2 - this.height / 2;
+        this.changeTextColor(this.systemColor());
+        this.drawText(_textSrpgWinCondition, 0, line * this.lineHeight(), this.width - 32, 'center');
+        line += 1;
+        this.changeTextColor(this.normalColor());
+        for (var i = 0; i < array.length; i++) {
+            if (array[i][0] == 'win') {
+                this.drawText(array[i][1], 0, line * this.lineHeight(), this.width - 32);
+                line += 1;
+            }
+        }
+        this.changeTextColor(this.systemColor());
+        this.drawText(_textSrpgLoseCondition, 0, line * this.lineHeight(), this.width - 32, 'center');
+        line += 1;
+        this.changeTextColor(this.normalColor());
+        for (var i = 0; i < array.length; i++) {
+            if (array[i][0] == 'lose') {
+                this.drawText(array[i][1], 0, line * this.lineHeight(), this.width - 32);
+                line += 1;
+            }
+        }
+    }
+};
 
 //====================================================================
 // ●Scene_Base
@@ -4805,10 +4915,10 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         $gameTemp.clearTargetEvent();
         $gameParty.clearSrpgBattleActors();
         $gameTroop.clearSrpgBattleEnemys();
-        this.eventAfterAction();
         if ($gameSystem.isBattlePhase() === 'actor_phase' || $gameSystem.isBattlePhase() === 'auto_actor_phase') {
             this.eventUnitEvent();
         }
+        this.eventAfterAction();
         $gameTemp.clearActiveEvent();
         if ($gameSystem.isBattlePhase() === 'actor_phase') {
             if (!this.isSrpgActorTurnEnd()) {
@@ -5638,12 +5748,36 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Scene_Menu
 //====================================================================
+    Scene_Menu.prototype.update = function() {
+        Scene_Base.prototype.update.call(this);
+        if (this._winLoseConditionWindow.isOpen()) this.updateWinLoseCondition();
+    };
+
+    Scene_Menu.prototype.updateWinLoseCondition = function() {
+        if (Input.isTriggered('ok') || TouchInput.isTriggered()) {
+            this._winLoseConditionWindow.close();
+            this._commandWindow.activate();
+        }
+    };
+
+    var _SRPG_SceneMenu_create = Scene_Menu.prototype.create;
+    Scene_Menu.prototype.create = function() {
+        _SRPG_SceneMenu_create.call(this);
+        this.createWinLoseWindow();
+    };
+
+    Scene_Menu.prototype.createWinLoseWindow = function() {
+        this._winLoseConditionWindow = new Window_WinLoseCondition(0, 0);
+        this.addWindow(this._winLoseConditionWindow);
+    };
+
     var _SRPG_SceneMenu_createCommandWindow = Scene_Menu.prototype.createCommandWindow;
     Scene_Menu.prototype.createCommandWindow = function() {
         _SRPG_SceneMenu_createCommandWindow.call(this);
         if ($gameSystem.isSRPGMode() == true) {
             this._commandWindow.setHandler('turnEnd',this.commandTurnEnd.bind(this));
             this._commandWindow.setHandler('autoBattle',this.commandAutoBattle.bind(this));
+            this._commandWindow.setHandler('winLoseCondition',this.commandWinLoseCondition.bind(this));
         }
     };
 
@@ -5657,6 +5791,11 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         $gameTemp.setTurnEndFlag(true);
         $gameTemp.setAutoBattleFlag(true);
         SceneManager.pop();
+    };
+
+    Scene_Menu.prototype.commandWinLoseCondition = function() {
+        this._commandWindow.deactivate();
+        this._winLoseConditionWindow.open();
     };
 
 //====================================================================
