@@ -65,6 +65,10 @@
  * @desc true is add command 'equip' in actor command.(true / false)
  * @default true
  *
+ * @param srpgWinLoseConditionCommand
+ * @desc true is add command 'Win / Lose Condetion' in menu command.(true / false)
+ * @default true
+ *
  * @param srpgBattleEndAllHeal
  * @desc all heal actors when tactical battle end.(true / false)
  * @default true
