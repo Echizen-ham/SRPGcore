@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.24
-// 最終更新日   : 2019/10/12
+// バージョン   : 1.25
+// 最終更新日   : 2020/2/9
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
@@ -1419,8 +1419,8 @@
         var flag = true;
         $gameMap.eventsXy(x, y).forEach(function(event) {
             var battlerArray = $gameSystem.EventToUnit(event._eventId);
-            if (battlerArray && event != $gameTemp.activeEvent() && !event.isErased() &&
-                battlerArray[0] === type || event.isType() === 'playerEvent') {
+            if (battlerArray && event != $gameTemp.activeEvent() && !event.isErased() ||
+                event.isType() === 'playerEvent') {
                 flag = false;
             }
         });
@@ -1965,6 +1965,14 @@
         }
     };
 
+    // 行動に通常攻撃を設定する
+    Game_Actor.prototype.setActionAttack = function() {
+        this.clearActions();
+        this._actions = [];
+        this._actions.push(new Game_Action(this));
+        this._actions[0].setSkill(this.attackSkillId());
+    };
+
     //自動行動を決定する
     var _SRPG_Game_Actor_makeAutoBattleActions = Game_Actor.prototype.makeAutoBattleActions;
     Game_Actor.prototype.makeAutoBattleActions = function() {
@@ -2185,6 +2193,14 @@
         for (var i = 0; i < this.numActions(); i++) {
             this.action(i).setSkill(this.attackSkillId());
         }
+    };
+
+    // 行動に通常攻撃を設定する
+    Game_Enemy.prototype.setActionAttack = function() {
+        this.clearActions();
+        this._actions = [];
+        this._actions.push(new Game_Action(this));
+        this._actions[0].setSkill(this.attackSkillId());
     };
 
 //====================================================================
@@ -5219,26 +5235,29 @@ Window_WinLoseCondition.prototype.refresh = function() {
                 return;
             }
         }
+        // mode:standの場合、行動開始するか判定する（通常攻撃の範囲内に対立ユニットがいるか）
+        if (_srpgStandUnitSkip === 'true' && actor.battleMode() === 'stand') {
+            actor.setActionAttack();
+            var targetType = this.makeTargetType(actor, 'actor');
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.srpgMakeMoveTable(event);
+            var canAttackTargets = this.srpgMakeCanAttackTargets(actor, targetType); //行動対象としうるユニットのリストを作成
+            $gameTemp.clearMoveTable();
+            if (canAttackTargets.length > 0 || actor.hpRate < 1.0) {
+                actor.setBattleMode('normal');
+            } else {
+                $gameTemp.setActiveEvent(event);
+                actor.onAllActionsEnd();
+                this.srpgAfterAction();
+                return;
+            }
+        }
+        // 行動を設定する
         actor.makeActions();
         if (actor.isConfused()) {
             actor.makeConfusionActions();
         }
         if (actor.action(0).item()) {
-            if (_srpgStandUnitSkip === 'true' && actor.battleMode() === 'stand') {
-                var targetType = this.makeTargetType(actor, 'actor');
-                $gameTemp.setActiveEvent(event);
-                $gameSystem.srpgMakeMoveTable(event);
-                var canAttackTargets = this.srpgMakeCanAttackTargets(actor, targetType); //行動対象としうるユニットのリストを作成
-                $gameTemp.clearMoveTable();
-                if ((actor.action(0).isForOpponent() == true && canAttackTargets.length > 0) || actor.hpRate < 1.0) {
-                    actor.setBattleMode('normal');
-                } else {
-                    $gameTemp.setActiveEvent(event);
-                    actor.onAllActionsEnd();
-                    this.srpgAfterAction();
-                    return;
-                }
-            }
             $gameTemp.setAutoMoveDestinationValid(true);
             $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
             $gameTemp.setActiveEvent(event);
@@ -5287,23 +5306,26 @@ Window_WinLoseCondition.prototype.refresh = function() {
                 return;
             }
         }
+        // mode:standの場合、行動開始するか判定する（通常攻撃の範囲内に対立ユニットがいるか）
+        if (_srpgStandUnitSkip === 'true' && enemy.battleMode() === 'stand') {
+            enemy.setActionAttack();
+            var targetType = this.makeTargetType(enemy, 'enemy');
+            $gameTemp.setActiveEvent(event);
+            $gameSystem.srpgMakeMoveTable(event);
+            var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
+            $gameTemp.clearMoveTable();
+            if (canAttackTargets.length > 0 || enemy.hpRate < 1.0) {
+                enemy.setBattleMode('normal');
+            } else {
+                $gameTemp.setActiveEvent(event);
+                enemy.onAllActionsEnd();
+                this.srpgAfterAction();
+                return;
+            }
+        }
+        // 行動を設定する
         enemy.makeSrpgActions();
         if (enemy.action(0).item()) {
-            if (_srpgStandUnitSkip === 'true' && enemy.battleMode() === 'stand') {
-                var targetType = this.makeTargetType(enemy, 'enemy');
-                $gameTemp.setActiveEvent(event);
-                $gameSystem.srpgMakeMoveTable(event);
-                var canAttackTargets = this.srpgMakeCanAttackTargets(enemy, targetType); //行動対象としうるユニットのリストを作成
-                $gameTemp.clearMoveTable();
-                if ((enemy.action(0).isForOpponent() == true && canAttackTargets.length > 0) || enemy.hpRate < 1.0) {
-                    enemy.setBattleMode('normal');
-                } else {
-                    $gameTemp.setActiveEvent(event);
-                    enemy.onAllActionsEnd();
-                    this.srpgAfterAction();
-                    return;
-                }
-            }
             $gameTemp.setAutoMoveDestinationValid(true);
             $gameTemp.setAutoMoveDestination(event.posX(), event.posY());
             $gameTemp.setActiveEvent(event);
@@ -5743,6 +5765,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
 
     // 戦闘開始時に向きを修正する
     Scene_Map.prototype.preBattleSetDirection = function() {
+        if ($gameTemp.activeEvent() == $gameTemp.targetEvent()) return;  // 自分自身の時は向きを修正しない
         var differenceX = $gameTemp.activeEvent().posX() - $gameTemp.targetEvent().posX();
         var differenceY = $gameTemp.activeEvent().posY() - $gameTemp.targetEvent().posY();
         if ($gameMap.isLoopHorizontal() == true) {
