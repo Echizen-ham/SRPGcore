@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.25
-// 最終更新日   : 2020/2/9
+// バージョン   : 1.26
+// 最終更新日   : 2020/2/15
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
@@ -91,6 +91,10 @@
  *
  * @param srpgDamageDirectionChange
  * @desc When attacked, correct the direction towards the attacker.(true / false)
+ * @default true
+ *
+ * @param srpgSkipTargetForSelf
+ * @desc For actions targeting oneself, skip the target selection process.(true / false)
  * @default true
  *
  * @param enemyDefaultClass
@@ -336,6 +340,10 @@
  * @desc 攻撃を受けた際に相手の方へ向きを補正します。(true / false)
  * @default true
  *
+ * @param srpgSkipTargetForSelf
+ * @desc 自分自身を対象とする行動では対象選択の処理をスキップします。(true / false)
+ * @default true
+ *
  * @param enemyDefaultClass
  * @desc エネミーに職業（srpgClass）が設定されていない場合、ここの名前が表示されます。
  * @default エネミー
@@ -530,6 +538,7 @@
     var _textSrpgWinLoseCondition = parameters['textSrpgWinLoseCondition'] || '勝敗条件';
     var _textSrpgWinCondition = parameters['textSrpgWinCondition'] || '勝利条件';
     var _textSrpgLoseCondition = parameters['textSrpgLoseCondition'] || '敗北条件';
+    var _srpgSkipTargetForSelf = parameters['srpgSkipTargetForSelf'] || 'true';
 
     var _Game_Interpreter_pluginCommand =
             Game_Interpreter.prototype.pluginCommand;
@@ -560,7 +569,6 @@
     this._RangeList = [];
     this._ResetMoveList = false;
     this._SrpgDistance = 0;
-    this._SrpgSpecialRange = true;
     this._ActiveEvent = null;
     this._TargetEvent = null;
     this._OriginalPos = [];
@@ -693,16 +701,6 @@
     //攻撃ユニットと対象の距離を設定する
     Game_Temp.prototype.setSrpgDistance = function(val) {
         this._SrpgDistance = val;
-    };
-
-    //攻撃ユニットと対象が特殊射程内にいるかを返す
-    Game_Temp.prototype.SrpgSpecialRange = function() {
-        return this._SrpgSpecialRange;
-    };
-
-    //攻撃ユニットと対象が特殊射程内にいるかを設定する
-    Game_Temp.prototype.setSrpgSpecialRange = function(val) {
-        this._SrpgSpecialRange = val;
     };
 
     //アクティブイベントの設定
@@ -1564,6 +1562,16 @@
         this._srpgActionTiming = timing;
     };
 
+    //攻撃ユニットと対象が特殊射程内にいるかを返す
+    Game_BattlerBase.prototype.SrpgSpecialRange = function(skill) {
+        var flag = true;
+        if (skill && skill.meta.specialRange) {
+            var range = this.srpgSkillRange(skill);
+            flag = $gameTemp.activeEvent().srpgRangeExtention($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill, range);
+        }
+        return flag;
+    };
+
     // 入力可能かどうかの判定
     var _SRPG_Game_BattlerBase_canInput = Game_BattlerBase.prototype.canInput;
     Game_BattlerBase.prototype.canInput = function() {
@@ -1607,7 +1615,7 @@
                  $gameSystem.isSubBattlePhase() === 'battle_window') &&
                 (this.srpgSkillRange(item) < $gameTemp.SrpgDistance() ||
                 this.srpgSkillMinRange(item) > $gameTemp.SrpgDistance() ||
-                $gameTemp.SrpgSpecialRange() == false ||
+                this.SrpgSpecialRange(item) == false ||
                 (this._srpgActionTiming == 1 && this.srpgWeaponCounter() == false) ||
                 (item.meta.notUseAfterMove && ($gameTemp.originalPos()[0] != $gameTemp.activeEvent().posX() ||
                  $gameTemp.originalPos()[1] != $gameTemp.activeEvent().posY()))
@@ -2859,9 +2867,6 @@
                                     if (_srpgPredictionWindowMode != 3) $gameSystem.setSrpgStatusWindowNeedRefresh(actionBattlerArray);
                                     $gameSystem.setSrpgBattleWindowNeedRefresh(actionBattlerArray, targetBattlerArray);
                                     $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), event));
-                                    var skill = actionBattlerArray[1].currentAction().item();
-                                    var range = actionBattlerArray[1].srpgSkillRange(skill);
-                                    $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention(event.posX(), event.posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill, range));
                                     $gameTemp.setTargetEvent(event);
                                     $gameSystem.setSubBattlePhase('battle_window');
                                 }
@@ -4699,7 +4704,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
     Scene_Map.prototype.createSrpgActorCommandWindow = function() {
         this._mapSrpgActorCommandWindow = new Window_ActorCommand();
         this._mapSrpgActorCommandWindow.x = Math.max(Graphics.boxWidth / 2 - this._mapSrpgActorCommandWindow.windowWidth(), 0);
-        this._mapSrpgActorCommandWindow.y = Math.max(Graphics.boxHeight / 2 - this._mapSrpgActorCommandWindow.windowHeight(), 0);;
+        this._mapSrpgActorCommandWindow.y = Math.max(Graphics.boxHeight / 2 - this._mapSrpgActorCommandWindow.windowHeight(), 0);
         this._mapSrpgActorCommandWindow.setHandler('attack', this.commandAttack.bind(this));
         this._mapSrpgActorCommandWindow.setHandler('skill',  this.commandSkill.bind(this));
         this._mapSrpgActorCommandWindow.setHandler('item',   this.commandItem.bind(this));
@@ -5104,6 +5109,17 @@ Window_WinLoseCondition.prototype.refresh = function() {
         actor.action(0).setSkill(skill.id);
         this._skillWindow.hide();
         this.startActorTargetting();
+        if (_srpgSkipTargetForSelf == 'true' && actor.action(0).isForUser()) {
+            var actionBattlerArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
+            var targetBattlerArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
+            SoundManager.playOk();
+            $gameSystem.clearSrpgActorCommandStatusWindowNeedRefresh();
+            if (_srpgPredictionWindowMode != 3) $gameSystem.setSrpgStatusWindowNeedRefresh(actionBattlerArray);
+            $gameSystem.setSrpgBattleWindowNeedRefresh(actionBattlerArray, targetBattlerArray);
+            $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), $gameTemp.activeEvent()));
+            $gameTemp.setTargetEvent($gameTemp.activeEvent());
+            $gameSystem.setSubBattlePhase('battle_window');
+        }
     };
 
     //スキルコマンド・キャンセル
@@ -5159,9 +5175,24 @@ Window_WinLoseCondition.prototype.refresh = function() {
         $gameSystem.clearSrpgStatusWindowNeedRefresh();
         $gameSystem.clearSrpgBattleWindowNeedRefresh();
         $gameTemp.setSrpgDistance(0);
-        $gameTemp.setSrpgSpecialRange(true);
         $gameTemp.clearTargetEvent();
         $gameSystem.setSubBattlePhase('actor_target');
+        if (_srpgSkipTargetForSelf == 'true' && battlerArray[1].action(0).isForUser()) {
+            var event = $gameTemp.activeEvent();
+            $gameTemp.clearMoveTable();
+            $gameTemp.initialMoveTable($gameTemp.originalPos()[0], $gameTemp.originalPos()[1], battlerArray[1].srpgMove());
+            event.makeMoveTable($gameTemp.originalPos()[0], $gameTemp.originalPos()[1], battlerArray[1].srpgMove(), [0], battlerArray[1].srpgThroughTag());
+            var list = $gameTemp.moveList();
+            for (var i = 0; i < list.length; i++) {
+                var pos = list[i];
+                var flag = $gameSystem.areTheyNoUnits(pos[0], pos[1], '');
+                if (flag == true && _srpgBestSearchRouteSize > 0) event.makeRangeTable(pos[0], pos[1], battlerArray[1].srpgWeaponRange(), [0], pos[0], pos[1], $dataSkills[battlerArray[1].attackSkillId()]);
+            }
+            $gameTemp.pushRangeListToMoveList();
+            $gameTemp.setResetMoveList(true);
+            $gameSystem.setSrpgActorCommandWindowNeedRefresh(battlerArray);
+            $gameSystem.setSubBattlePhase('actor_command_window');
+        }
     };
 
     //メニューからのターン終了処理
@@ -5685,9 +5716,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
         var actionArray = $gameSystem.EventToUnit($gameTemp.activeEvent().eventId());
         var targetArray = $gameSystem.EventToUnit($gameTemp.targetEvent().eventId());
         var skill = actionArray[1].currentAction().item();
-        var range = actionArray[1].srpgSkillRange(skill);
         $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), $gameTemp.targetEvent()));
-        $gameTemp.setSrpgSpecialRange($gameTemp.activeEvent().srpgRangeExtention($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY(), $gameTemp.activeEvent().posX(), $gameTemp.activeEvent().posY(), skill, range));
         if (actionArray[1].canUse(skill)) {
             $gameTemp.setAutoMoveDestinationValid(true);
             $gameTemp.setAutoMoveDestination($gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY());
