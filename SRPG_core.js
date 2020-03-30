@@ -1,6 +1,6 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.26
+// バージョン   : 1.27
 // 最終更新日   : 2020/2/15
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
@@ -200,7 +200,7 @@
  *                      # when set -1, 'weaponRange' on weapon or enemy's note set to this attack range.
  *   <srpgMinRange:X>   # set attack minimum range X.
  *   <specialRange:X>   # specialize the shape of the range (eg <specialRange: queen>).
- *                      # queen: 8 directions, luke: straight, bishop: diagonal, knight: other than 8 directions
+ *                      # queen: 8 directions, luke: straight, bishop: diagonal, knight: other than 8 directions, king: square
  *   <addActionTimes: X># Increases the number of actions by X when the skill is used. If set to 1, the skill can re-act after the action.
  *                      # It is recommended to combine with <notUseAfterMove> below because unit can move many times.
  *   <notUseAfterMove>  # The skill cannot be used after moving.
@@ -250,7 +250,9 @@
  *                                                       # among all actors in the variable.
  *   this.isUnitDead(SwitchID, EventID); # Stores in the switch whether the event with the specified ID is dead or not.
  *   this.isEventIdXy(VariableID, X, Y); # Stores the event ID of the specified coordinates (X, Y) in the variable.
+ *   this.checkRegionId(switcheID, regionID); # Stores in the switch whether an actor is on the specified region ID.
  *   this.unitRecoverAll(EventID);       # Full recovery of the unit with the specified event ID (only when it is alive).
+ *   this.unitRevive(EventID);           # Revive of the unit with the specified event ID (only when it is dead).
  *   this.unitAddState(EventId, StateId);# Add the state of the ID specified to the unit with the specified event ID.
  *   this.turnEnd();                     # End player's turn(Same 'Turn End' in menu).
  *   this.isSubPhaseNormal(SwitchID);    # Whether the player selects the unit to be operated (ON is the same as when the menu can be opened). 
@@ -447,7 +449,7 @@
  *                      # srpgRangeを -1 に設定すると武器・エネミーのメモの<weaponRange>が適用されます。
  *   <srpgMinRange:X>   # そのスキルの最低射程をXに設定します。
  *   <specialRange:X>   # 射程の形状を特殊化します（例：<specialRange:queen>）。
- *                      # queen：8方向、luke：直線、bishop：斜め、knight：8方向以外
+ *                      # queen：8方向、luke：直線、bishop：斜め、knight：8方向以外、king：四角
  *   <addActionTimes: X># スキル発動時に行動回数を +X します。1 にすると行動後に再行動できるスキルになります。
  *                      # そのままだと何度も移動できてしまうため、下記の<notUseAfterMove>と組み合わせることを推奨します。
  *   <notUseAfterMove>  # 移動後は使用できないスキルになります。
@@ -495,7 +497,9 @@
  *                                                       # 最も近いアクターとの距離を変数に格納します。
  *   this.isUnitDead(SwitchID, EventID); # 指定したＩＤのイベントが戦闘不能かどうかをスイッチに格納します。
  *   this.isEventIdXy(VariableID, X, Y); # 指定した座標(X, Y)のイベントＩＤを変数に格納します。
+ *   this.checkRegionId(switcheID, regionID); # 指定したリージョンID上にアクターがいるか判定してスイッチに格納します。
  *   this.unitRecoverAll(EventID);       # 指定したイベントＩＤのユニットを全回復します（生存している時のみ）。
+ *   this.unitRevive(EventID);           # 指定したイベントＩＤのユニットを復活します（戦闘不能時のみ）。
  *   this.unitAddState(EventId, StateId);# 指定したイベントＩＤのユニットに指定したＩＤのステートを付与します。
  *   this.turnEnd();                     # プレイヤーのターンを終了します（メニューの「ターン終了」と同じ機能）
  *   this.isSubPhaseNormal(SwitchID);    # 操作するユニットを選択する状態かをスイッチに格納します（ONだとメニューが開ける状態と同じ）。
@@ -3262,6 +3266,18 @@ Game_Interpreter.prototype.isEventIdXy = function(variableId, x, y) {
     return true;
 };
 
+// 指定したリージョンID上に味方ユニットがいるか判定する
+Game_Interpreter.prototype.checkRegionId = function(switcheId, regionId) {
+    $gameSwitches.setValue(switcheId, false);
+    $gameMap.events().forEach(function(event) {
+        if (event.isType() === 'actor') {
+            if ($gameMap.regionId(event.posX(), event.posY()) == regionId) {
+                $gameSwitches.setValue(switcheId, true);
+            }
+        }
+    });
+};
+
 // 指定したイベントＩＤのユニットを全回復する
 Game_Interpreter.prototype.unitRecoverAll = function(eventId) {
     var battlerArray = $gameSystem.EventToUnit(eventId);
@@ -3282,8 +3298,13 @@ Game_Interpreter.prototype.unitRevive = function(eventId) {
             return;
         }
         battlerArray[1].removeState(battlerArray[1].deathStateId());
-        var oldValue = $gameVariables.value(_existEnemyVarID);
-        $gameVariables.setValue(_existEnemyVarID, oldValue + 1);
+        if (battlerArray[0] === 'actor') {
+            var oldValue = $gameVariables.value(_existActorVarID);
+            $gameVariables.setValue(_existActorVarID, oldValue + 1);
+        } else {
+            var oldValue = $gameVariables.value(_existEnemyVarID);
+            $gameVariables.setValue(_existEnemyVarID, oldValue + 1);
+        }
         var xy = event.makeAppearPoint(event, event.posX(), event.posY())
         event.setPosition(xy[0], xy[1]);
         event.appear();
@@ -4477,7 +4498,20 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     };
 
     Window_SrpgBattle.prototype.isEnabled = function(item) {
-        return this._actor && this._actor.canUse(item);
+        if ($gameTemp.targetEvent()) {
+            var moveRangeList = $gameTemp.moveList();
+            var pos = [$gameTemp.targetEvent().posX(), $gameTemp.targetEvent().posY()];
+            var flag = false;
+            for (var i = 0; i < moveRangeList.length; i++) {
+                 if (moveRangeList[i][0] == pos[0] && moveRangeList[i][1] == pos[1]) {
+                     flag = true;
+                     break;
+                 }
+            }
+            return this._actor && this._actor.canUse(item) && flag;
+        } else {
+            return this._actor && this._actor.canUse(item);
+        }
     };
 
     Window_SrpgBattle.prototype.clearActor = function() {
