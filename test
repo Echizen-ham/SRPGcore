@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.28
-// 最終更新日   : 2020/2/15
+// バージョン   : 1.27 + Q
+// 最終更新日   : 2020/5/19
 // 制作         : 神鏡学斗
 // 配布元       : http://www.lemon-slice.net/
 // バグ修正協力 : アンチョビ様　
@@ -15,136 +15,195 @@
 
 /*:
  * @plugindesc SRPG battle system (tactical battle system) on map.
- * @author Gakuto Mikagami
+ * @author Gakuto Mikagami (adjustments by Dr. Q)
  *
  * @param srpgTroopID
  * @desc SRPGconverter use this troop ID.
+ * @type number
+ * @min 1
  * @default 1
  *
  * @param srpgBattleSwitchID
  * @desc switch ID of 'in tactical battle' or 'not'. If using tactical battle system, this swith turn on。
+ * @type switch
  * @default 1
  *
  * @param existActorVarID
  * @desc variable ID of 'exist actor'. Exist is not death state and hide。
+ * @type variable
  * @default 1
  *
  * @param existEnemyVarID
  * @desc variable ID of 'exist enemy'. Exist is not death state and hide。
+ * @type variable
  * @default 2
  *
  * @param turnVarID
  * @desc variable ID of 'srpg turn'. first turn is 'turn 1'。
+ * @type variable
  * @default 3
  *
  * @param activeEventID
  * @desc variable ID of 'acting event ID'.
+ * @type variable
  * @default 4
  *
  * @param targetEventID
  * @desc variable ID of 'target event ID'. not only attack but also heal or assist.
+ * @type variable
  * @default 5
  *
  * @param maxActorVarID
  * @desc variable ID of the maximum number of actors participating in the battle. Set to 0 to disable.
+ * @type variable
  * @default 0
  *
  * @param defaultMove
  * @desc use this parameter if you don't set move in class or enemy note.
+ * @type number
+ * @min 0
  * @default 4
  *
  * @param srpgBattleExpRate
  * @desc if player can't defeat enemy, player get exp in this rate. set 0 to 1.0.
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
  * @default 0.4
  *
  * @param srpgBattleExpRateForActors
  * @desc if player act for friends,player get exp in this rate(to next level). set 0 to 1.0. 
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
  * @default 0.1
  *
  * @param srpgBattleQuickLaunch
  * @desc true is quick the battle start effect.(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgActorCommandEquip
  * @desc true is add command 'equip' in actor command.(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgWinLoseConditionCommand
  * @desc true is add command 'Win / Lose Condetion' in menu command.(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgBattleEndAllHeal
  * @desc all heal actors when tactical battle end.(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgPredictionWindowMode
  * @desc Change the display of the battle prediction window. (1: full / 2: only attack name / 3: not displayed)
+ * @type select
+ * @option Full
+ * @value 1
+ * @option Only attack name
+ * @value 2
+ * @option Not displayed
+ * @value 3
  * @default 1
  *
  * @param srpgAutoBattleStateId
- * @desc a state ID to be given when auto battle is selected. State is "automatic battle" & canceled 1 action(invalidated by 0).
+ * @desc A state ID to be given when auto battle is selected. State is "automatic battle" & canceled 1 action(invalidated by 0).
+ * @type state
  * @default 14
  *
  * @param srpgBestSearchRouteSize
  * @desc If there is no target can be attacked, the closest route is searched. This is a searchable distance(invalidated by 0).
+ * @type number
+ * @min 0
  * @default 20
  *
  * @param srpgDamageDirectionChange
  * @desc When attacked, correct the direction towards the attacker.(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgSkipTargetForSelf
  * @desc For actions targeting oneself, skip the target selection process.(true / false)
- * @default true
- *
- * @param srpgRangeTerrainTag7
- * @desc Make the terrain tag 7 that does not pass the range.(true / false)
+ * @type boolean
  * @default true
  *
  * @param enemyDefaultClass
- * @desc if you don't set class in enemy note, use this name.
+ * @desc If you don't set class in enemy note, use this name.
  * @default Enemy
  *
  * @param textSrpgEquip
- * @desc name of weapon. use in SRPG state window.
+ * @desc Name of weapon. Used in SRPG state window.
  * @default Weapon
  *
  * @param textSrpgMove
- * @desc name of move range. use in SRPG state window.
+ * @desc Name of move range. Used in SRPG state window.
  * @default Move
  *
  * @param textSrpgRange
- * @desc name of attack range. use in SRPG state window.
+ * @desc Name of attack range. Used in SRPG state window.
  * @default Range
  *
  * @param textSrpgWait
- * @desc name of stand. use in SRPG state window.
+ * @desc Name of stand. Used in SRPG state window.
  * @default Stand
  *
  * @param textSrpgWinLoseCondition
  * @desc A term used to describe the win / loss conditions. It is displayed in the menu command window.
- * @default win / loss conditions
+ * @default Win / loss conditions
  *
  * @param textSrpgWinCondition
  * @desc A term used to describe the win conditions. It is displayed in the win / loss conditions window.
- * @default win conditions
+ * @default Win conditions
  *
  * @param textSrpgLoseCondition
  * @desc A term used to describe the loss conditions. It is displayed in the win / loss conditions window.
- * @default loss conditions
+ * @default Loss conditions
  *
  * @param textSrpgTurnEnd
- * @desc name of turn end. use in menu window.
+ * @desc Name of turn end. Used in menu window.
  * @default Turn End
  *
  * @param textSrpgAutoBattle
- * @desc name of auto battle. use in menu window.
+ * @desc Name of auto battle. Used in menu window.
  * @default Auto Battle
  *
+ * @param textSrpgDamage
+ * @desc Name of damage in the prediction window.
+ * @default Damage
  *
- * @requiredAssets img/characters/srpg_set
- * @requiredAssets audio/se/Item3
- * @requiredAssets audio/se/Up4
+ * @param textSrpgHealing
+ * @desc Name of healing in the prediction window.
+ * @default Healing
+ *
+ * @param textSrpgNone
+ * @desc Term for nothing equipped on a unit.
+ * @default None
+ *
+ * @param srpgSet
+ * @desc Spriteset for cursor and SRPG system icons
+ * @type file
+ * @dir img/characters/
+ * @require 1
+ * @default srpg_set
+ *
+ * @param rewardSound
+ * @desc Sound effect for the reward window
+ * @type file
+ * @dir audio/se/
+ * @require 1
+ * @default Item3
+ *
+ * @param expSound
+ * @desc Sound effect for the exp guage increasing
+ * @type file
+ * @dir audio/se/
+ * @require 1
+ * @default Up4
  * 
  * @noteParam characterName
  * @noteRequire 1
@@ -204,7 +263,8 @@
  *                      # when set -1, 'weaponRange' on weapon or enemy's note set to this attack range.
  *   <srpgMinRange:X>   # set attack minimum range X.
  *   <specialRange:X>   # specialize the shape of the range (eg <specialRange:queen>).
- *                      # queen: 8 directions, luke: straight, bishop: diagonal, knight: other than 8 directions, king: square
+ *                      # queen: 8 directions, luke: straight, bishop: diagonal, knight: other than 8 directions,
+ *                      # king: square
  *   <addActionTimes: X># Increases the number of actions by X when the skill is used. If set to 1, the skill can re-act after the action.
  *                      # It is recommended to combine with <notUseAfterMove> below because unit can move many times.
  *   <notUseAfterMove>  # The skill cannot be used after moving.
@@ -264,6 +324,17 @@
  *   $gameSystem.setSrpgWinCondition('text');    # Set win conditions. If you want to describe multiple conditions, execute it multiple times.
  *   $gameSystem.setSrpgLoseCondition('text');   # Set lose conditions. If you want to describe multiple conditions, execute it multiple times.
  *
+ * Dr. Q's modifications:
+ * - new windows, sprites, etc. are made available to extension plugins
+ * - end-of-turn / stunned / auto indicators disappear when you leave srpg mode
+ * - erased events won't turn into invisible, untargetable enemies / actors
+ * - if the prediction window is disabled, selecting an invalid target won't skip your turn
+ * - move / range squares go under sprites instead of over top of them
+ * - fixed the name of the 'rook' special range, but 'luke' still works if you want
+ * - added parameters for the previously unchangable text, sounds, and sprites
+ * - updated to support the fancy MV plugin parameters, for easier configuration
+ * - never turn around when targeting yourself
+ *
  */
 
 /*:ja
@@ -272,86 +343,117 @@
  *
  * @param srpgTroopID
  * @desc SRPGコンバータが占有するトループIDです。SRPG戦闘では、このIDのトループが使用されます。
+ * @type number
+ * @min 1
  * @default 1
  *
  * @param srpgBattleSwitchID
  * @desc SRPG戦闘中であるかを格納するスイッチのＩＤを指定します。戦闘中はONになります。
+ * @type switch
  * @default 1
  *
  * @param existActorVarID
  * @desc 存在しているアクターの人数が代入される変数のＩＤを指定します。存在している＝戦闘不能・隠れでない。
+ * @type variable
  * @default 1
  *
  * @param existEnemyVarID
  * @desc 存在しているエネミーの人数が代入される変数のＩＤを指定します。存在している＝戦闘不能・隠れでない。
+ * @type variable
  * @default 2
  *
  * @param turnVarID
  * @desc 経過ターン数が代入される変数のＩＤを指定します。最初のターンは『ターン１』です。
+ * @type variable
  * @default 3
  *
  * @param activeEventID
  * @desc 行動中のユニットのイベントＩＤが代入される変数のＩＤを指定します。
+ * @type variable
  * @default 4
  *
  * @param targetEventID
  * @desc 攻撃対象のユニットのイベントＩＤが代入される変数のＩＤを指定します。回復や補助も含みます。
+ * @type variable
  * @default 5
  *
  * @param maxActorVarID
  * @desc 戦闘に参加するアクターの最大数を設定する変数のIDを指定します。０で無効。
+ * @type variable
  * @default 0
  *
  * @param defaultMove
  * @desc クラスやエネミーのメモで移動力が設定されていない場合、この値が適用されます。
+ * @type number
+ * @min 0
  * @default 4
  *
  * @param srpgBattleExpRate
  * @desc 敵を倒さなかった時に、設定された経験値の何割を入手するか。0 ～ 1.0で設定。
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
  * @default 0.4
  *
  * @param srpgBattleExpRateForActors
  * @desc 味方に対して行動した時に、レベルアップに必要な経験値の何割を入手するか。0 ～ 1.0で設定。
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
  * @default 0.1
  *
  * @param srpgBattleQuickLaunch
  * @desc 戦闘開始エフェクトを高速化します。falseだと通常と同じになります。(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgActorCommandEquip
  * @desc アクターコマンドに『装備』を追加します。(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgWinLoseConditionCommand
  * @desc メニューコマンドに『勝敗条件』を追加します。(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgBattleEndAllHeal
  * @desc 戦闘終了後に自動的に味方全員を全回復します。falseだと自動回復しません。(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgPredictionWindowMode
  * @desc 戦闘予測ウィンドウの表示を変更します。(1:フル / 2:攻撃名のみ / 3:表示なし)
+ * @type select
+ * @option フル
+ * @value 1
+ * @option 攻撃名のみ
+ * @value 2
+ * @option 表示なし
+ * @value 3
  * @default 1
  *
  * @param srpgAutoBattleStateId
  * @desc オート戦闘が選ばれた時に付与するステートのIDです。1行動で解除・自動戦闘のステートを使います(0で無効化)。
+ * @type state
  * @default 14
  *
  * @param srpgBestSearchRouteSize
  * @desc 攻撃可能な対象がいない時、最も近い敵までのルートを探索します。その索敵距離です（0で無効化）。
+ * @type number
+ * @min 0
  * @default 20
  *
  * @param srpgDamageDirectionChange
  * @desc 攻撃を受けた際に相手の方へ向きを補正します。(true / false)
+ * @type boolean
  * @default true
  *
  * @param srpgSkipTargetForSelf
  * @desc 自分自身を対象とする行動では対象選択の処理をスキップします。(true / false)
- * @default true
- *
- * @param srpgRangeTerrainTag7
- * @desc 地形タグ７を射程が通らないタイルにします。(true / false)
+ * @type boolean
  * @default true
  *
  * @param enemyDefaultClass
@@ -394,10 +496,38 @@
  * @desc オート戦闘を表す用語です。メニュー画面で表示されます。
  * @default オート戦闘
  *
+ * @param textSrpgDamage
+ * @desc Name of damage in the prediction window.
+ * @default ダメージ
  *
- * @requiredAssets img/characters/srpg_set
- * @requiredAssets audio/se/Item3
- * @requiredAssets audio/se/Up4
+ * @param textSrpgHealing
+ * @desc Name of healing in the prediction window.
+ * @default 回復
+ *
+ * @param textSrpgNone
+ * @desc Term for nothing equipped on a unit.
+ * @default なし
+ *
+ * @param srpgSet
+ * @desc Spriteset for cursor and SRPG system icons
+ * @type file
+ * @dir img/characters/
+ * @require 1
+ * @default srpg_set
+ *
+ * @param rewardSound
+ * @desc Sound effect for the reward window
+ * @type file
+ * @dir audio/se/
+ * @require 1
+ * @default Item3
+ *
+ * @param expSound
+ * @desc Sound effect for the exp guage increasing
+ * @type file
+ * @dir audio/se/
+ * @require 1
+ * @default Up4
  * 
  * @noteParam characterName
  * @noteRequire 1
@@ -551,7 +681,12 @@
     var _textSrpgWinCondition = parameters['textSrpgWinCondition'] || '勝利条件';
     var _textSrpgLoseCondition = parameters['textSrpgLoseCondition'] || '敗北条件';
     var _srpgSkipTargetForSelf = parameters['srpgSkipTargetForSelf'] || 'true';
-    var _srpgRangeTerrainTag7 = parameters['srpgRangeTerrainTag7'] || 'true';
+    var _textSrpgDamage = parameters['textSrpgDamage'] || 'ダメージ';
+    var _textSrpgHealing = parameters['textSrpgHealing'] || '回復';
+    var _textSrpgNone = parameters['textSrpgNone'] || 'なし';
+    var _srpgSet = parameters['srpgSet'] || 'srpg_set';
+    var _rewardSe = parameters['rewardSound'] || 'Item3';
+    var _expSe = parameters['expSound'] || 'Up4';
 
     var _Game_Interpreter_pluginCommand =
             Game_Interpreter.prototype.pluginCommand;
@@ -1159,7 +1294,7 @@
         $gameVariables.setValue(_existActorVarID, 0);
         // 固定アクターを予約する
         $gameMap.events().forEach(function(event) {
-            if (event.isType() === 'actor') {
+            if (event.isType() === 'actor' && !event.isErased()) {
                 var actorId = event.event().meta.id ? Number(event.event().meta.id) : 0;
                 if (actorId > 0) {
                     fix_actors.push(actorId);
@@ -1171,7 +1306,7 @@
         var array = $gameParty.allMembers();
         var actorNum = 0;
         $gameMap.events().forEach(function(event) {
-            if (event.isType() === 'actor') {
+            if (event.isType() === 'actor' && !event.isErased()) {
                 if (_maxActorVarID > 0 && $gameVariables.value(_maxActorVarID) > 0 && 
                     actorNum >= $gameVariables.value(_maxActorVarID)) {
                     event.erase();
@@ -1218,7 +1353,7 @@
         $gameVariables.setValue(_existEnemyVarID, 0);
         var i = 0;
         $gameMap.events().forEach(function(event) {
-            if (event.isType() === 'enemy') {
+            if (event.isType() === 'enemy' && !event.isErased()) {
                 var enemyId = event.event().meta.id ? Number(event.event().meta.id) : 1;
                 var enemy_unit = new Game_Enemy(enemyId, 0, 0);
                 if (enemy_unit) {
@@ -2616,7 +2751,7 @@
         if (!$gameMap.isValid(x2, y2)) {
             return false;
         }
-        if (_srpgRangeTerrainTag7 == 'true' && $gameMap.terrainTag(x2, y2) == 7) {
+        if ($gameMap.terrainTag(x2, y2) == 7) {
             return false;
         }
         return true;
@@ -2637,6 +2772,7 @@
             } else {
                 return false;
             }
+        case 'rook': 
         case 'luke': 
             if (x == oriX || y == oriY) {
                 return true;
@@ -2723,27 +2859,40 @@
         }
     };
 
+    //移動可能かを判定する（イベント出現時用）
+    Game_CharacterBase.prototype.srpgAppearCanPass = function(x, y, d) {
+        var x2 = $gameMap.roundXWithDirection(x, d);
+        var y2 = $gameMap.roundYWithDirection(y, d);
+        if (!$gameMap.isValid(x2, y2)) {
+            return false;
+        }
+        if (!this.isMapPassable(x, y, d)) {
+            return false;
+        }
+        return true;
+    };
+
     //出現可能場所の計算
-    Game_CharacterBase.prototype.makeAppearPoint = function(event, x, y, tag) {
+    Game_CharacterBase.prototype.makeAppearPoint = function(event, x, y) {
         var events = $gameMap.eventsXyNt(x, y);
         if (events.length == 0 || (events.length == 1 && events[0] == event)) {
             return [x,y];
         }
         //上方向を探索
-        if (this.srpgMoveCanPass(x, y, 8, tag)) {
-            return this.makeAppearPoint(event, x, y - 1, tag);
+        if (this.srpgAppearCanPass(x, y, 8)) {
+            return this.makeAppearPoint(event, x, y - 1);
         }
         //右方向を探索
-        if (this.srpgMoveCanPass(x, y, 6, tag)) {
-            return this.makeAppearPoint(event, x + 1, y, tag);
+        if (this.srpgAppearCanPass(x, y, 6)) {
+            return this.makeAppearPoint(event, x + 1, y);
         }
         //左方向を探索
-        if (this.srpgMoveCanPass(x, y, 4, tag)) {
-            return this.makeAppearPoint(event, x - 1, y, tag);
+        if (this.srpgAppearCanPass(x, y, 4)) {
+            return this.makeAppearPoint(event, x - 1, y);
         }
         //下方向を探索
-        if (this.srpgMoveCanPass(x, y, 2, tag)) {
-            return this.makeAppearPoint(event, x, y + 1, tag);
+        if (this.srpgAppearCanPass(x, y, 2)) {
+            return this.makeAppearPoint(event, x, y + 1);
         }
     };
 
@@ -2754,7 +2903,7 @@
     var _SRPG_Game_Player_refresh = Game_Player.prototype.refresh;
     Game_Player.prototype.refresh = function() {
         if ($gameSystem.isSRPGMode() == true) {
-            var characterName = 'srpg_set';
+            var characterName = _srpgSet;
             var characterIndex = 0;
             this.setImage(characterName, characterIndex);
             this._followers.refresh();
@@ -2862,13 +3011,21 @@
                                 var targetBattlerArray = $gameSystem.EventToUnit(event.eventId());
                                 if (targetBattlerArray[0] === 'actor' && actionBattlerArray[1].currentAction().isForFriend() ||
                                     targetBattlerArray[0] === 'enemy' && actionBattlerArray[1].currentAction().isForOpponent()) {
+                                    $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), event));
+                                    var skill = actionBattlerArray[1].currentAction().item();
+                                    var range = actionBattlerArray[1].srpgSkillRange(skill);
+                                    $gameTemp.setTargetEvent(event);
+                                    $gameSystem.setSubBattlePhase('battle_window');
+                                    if (_srpgPredictionWindowMode == 3 && !actionBattlerArray[1].canUse(skill)) {
+                                        $gameTemp.setSrpgDistance(0);
+                                        $gameTemp.clearTargetEvent();
+                                        $gameSystem.setSubBattlePhase('actor_target');
+                                        return;
+                                    }
                                     SoundManager.playOk();
                                     $gameSystem.clearSrpgActorCommandStatusWindowNeedRefresh();
                                     if (_srpgPredictionWindowMode != 3) $gameSystem.setSrpgStatusWindowNeedRefresh(actionBattlerArray);
                                     $gameSystem.setSrpgBattleWindowNeedRefresh(actionBattlerArray, targetBattlerArray);
-                                    $gameTemp.setSrpgDistance($gameSystem.unitDistance($gameTemp.activeEvent(), event));
-                                    $gameTemp.setTargetEvent(event);
-                                    $gameSystem.setSubBattlePhase('battle_window');
                                 }
                             }
                         }
@@ -3181,7 +3338,7 @@ Game_Interpreter.prototype.addActor = function(eventId, actorId) {
         $gameVariables.setValue(_existActorVarID, oldValue + 1);
         $gameSystem.setEventToUnit(event.eventId(), 'actor', actor_unit.actorId());
         event.setType('actor');
-        var xy = event.makeAppearPoint(event, event.posX(), event.posY(), actor_unit.srpgThroughTag());
+        var xy = event.makeAppearPoint(event, event.posX(), event.posY());
         event.setPosition(xy[0], xy[1]);
         $gameMap.setEventImages();
     }
@@ -3208,7 +3365,7 @@ Game_Interpreter.prototype.addEnemy = function(eventId, enemyId) {
         $gameVariables.setValue(_existEnemyVarID, oldValue + 1);
         $gameSystem.setEventToUnit(event.eventId(), 'enemy', enemy_unit);
         event.setType('enemy');
-        var xy = event.makeAppearPoint(event, event.posX(), event.posY(), enemy_unit.srpgThroughTag());
+        var xy = event.makeAppearPoint(event, event.posX(), event.posY())
         event.setPosition(xy[0], xy[1]);
         $gameMap.setEventImages();
     }
@@ -3301,7 +3458,7 @@ Game_Interpreter.prototype.unitRevive = function(eventId) {
             var oldValue = $gameVariables.value(_existEnemyVarID);
             $gameVariables.setValue(_existEnemyVarID, oldValue + 1);
         }
-        var xy = event.makeAppearPoint(event, event.posX(), event.posY(), battlerArray[1].srpgThroughTag());
+        var xy = event.makeAppearPoint(event, event.posX(), event.posY())
         event.setPosition(xy[0], xy[1]);
         event.appear();
         $gameMap.setEventImages();
@@ -3384,7 +3541,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     var _SRPG_Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
     Sprite_Character.prototype.setCharacterBitmap = function() {
         _SRPG_Sprite_Character_setCharacterBitmap.call(this);
-        this._turnEndBitmap = ImageManager.loadCharacter('srpg_set');
+        this._turnEndBitmap = ImageManager.loadCharacter(_srpgSet);
     };
 
     //キャラクターフレームの更新
@@ -3426,6 +3583,9 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                     this._turnEndSprite.visible = false;
                 }
             }
+        } else if (this._turnEndSprite) {
+            this.removeChild(this._turnEndSprite);
+            this._turnEndSprite = null;
         }
     };
 
@@ -3442,7 +3602,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Sprite_SrpgMoveTile
 //====================================================================
-    function Sprite_SrpgMoveTile() {
+    window.Sprite_SrpgMoveTile = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -3455,6 +3615,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         this._frameCount = 0;
         this._posX = -1;
         this._posY = -1;
+        this.z = 0;
         this.visible = false;
     };
 
@@ -3521,7 +3682,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         this._srpgMoveTile = [];
         for (var i = 0; i < $gameSystem.spriteMoveTileMax(); i++) {
             this._srpgMoveTile[i] = new Sprite_SrpgMoveTile();
-            this._baseSprite.addChild(this._srpgMoveTile[i]);
+            this._tilemap.addChild(this._srpgMoveTile[i]);
         }
     };
 
@@ -3627,7 +3788,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         if (item) {
             this.drawItemName(item, x + 96, y, 240);
         } else {
-            this.drawText('なし', x + 96, y, 240);
+            this.drawText(_textSrpgNone, x + 96, y, 240);
         }
     };
 
@@ -3640,14 +3801,14 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         if (item) {
             this.drawItemName(item, x + 96, y, 240);
         } else {
-            this.drawText('なし', x + 96, y, 240);
+            this.drawText(_textSrpgNone, x + 96, y, 240);
         }
     };
 
 //====================================================================
 // ●Window_SrpgStatus
 //====================================================================
-    function Window_SrpgStatus() {
+    window.Window_SrpgStatus = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -3777,7 +3938,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_SrpgActorCommandStatus
 //====================================================================
-    function Window_SrpgActorCommandStatus() {
+    window.Window_SrpgActorCommandStatus = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -3845,7 +4006,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_SrpgBattleStatus
 //====================================================================
-    function Window_SrpgBattleStatus() {
+    window.Window_SrpgBattleStatus = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -4026,7 +4187,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_SrpgBattleResult
 //====================================================================
-    function Window_SrpgBattleResult() {
+    window.Window_SrpgBattleResult = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -4107,7 +4268,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
         if (nowExp >= this._battler.expForLevel(this._level + 1)) {
             this._level += 1;
             var se = {};
-            se.name = 'Up4';
+            se.name = _expSe;
             se.pan = 0;
             se.pitch = 100;
             se.volume = 90;
@@ -4161,7 +4322,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_SrpgPrediction
 //====================================================================
-    function Window_SrpgPrediction() {
+    window.Window_SrpgPrediction = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -4339,11 +4500,11 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     Window_SrpgPrediction.prototype.drawSrpgBattleDamage = function(damage, x, y) {
         this.changeTextColor(this.systemColor());
         if (damage >= 0) {
-            this.drawText('ダメージ', x, y, 164);
+            this.drawText(_textSrpgDamage, x, y, 164);
             this.resetTextColor();
             this.drawText(damage, x + 188, y, 100, 'right');
         } else {
-            this.drawText('回復', x, y, 164);
+            this.drawText(_textSrpgHealing, x, y, 164);
             this.resetTextColor();
             this.drawText(damage * -1, x + 188, y, 100, 'right');
         }
@@ -4352,7 +4513,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     Window_SrpgPrediction.prototype.drawSrpgBattleHit = function(hit, eva, x, y) {
         var val = 1.0 * hit * (1.0 - eva);
         this.changeTextColor(this.systemColor());
-        this.drawText('命中', x, y, 98);
+        this.drawText(TextManager.param(8), x, y, 98);
         this.resetTextColor();
         this.drawText(Math.floor(val * 100) + '%', x + 64, y, 64, 'right');
     };
@@ -4455,7 +4616,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_SrpgBattle
 //====================================================================
-    function Window_SrpgBattle() {
+    window.Window_SrpgBattle = function() {
         this.initialize.apply(this, arguments);
     }
 
@@ -4479,7 +4640,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     };
 
     Window_SrpgBattle.prototype.makeCommandList = function() {
-        this.addCommand('戦闘開始', 'battleStart', this.isEnabled(this._item));
+        this.addCommand(TextManager.fight, 'battleStart', this.isEnabled(this._item));
         this.addCommand(TextManager.cancel, 'cancel');
     };
 
@@ -4584,7 +4745,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 //====================================================================
 // ●Window_WinLoseCondition
 //====================================================================
-function Window_WinLoseCondition() {
+window.Window_WinLoseCondition = function() {
     this.initialize.apply(this, arguments);
 }
 
@@ -5304,7 +5465,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
             $gameSystem.srpgMakeMoveTable(event);
             var canAttackTargets = this.srpgMakeCanAttackTargets(actor, targetType); //行動対象としうるユニットのリストを作成
             $gameTemp.clearMoveTable();
-            if (canAttackTargets.length > 0 || actor.hpRate < 1.0) {
+            if (canAttackTargets.length > 0 || actor.hpRate() < 1.0) {
                 actor.setBattleMode('normal');
             } else {
                 $gameTemp.setActiveEvent(event);
@@ -5869,11 +6030,20 @@ Window_WinLoseCondition.prototype.refresh = function() {
     // SRPG戦闘中は戦闘開始エフェクトを高速化する
     var _SRPG_SceneMap_updateEncounterEffect = Scene_Map.prototype.updateEncounterEffect;
     Scene_Map.prototype.updateEncounterEffect = function() {
-        if ($gameSystem.isSRPGMode() == true && _srpgBattleQuickLaunch == 'true') {
+        if ($gameSystem.isSRPGMode() == true && $gameSwitches.value(2) == true) {
+            if (this._encounterEffectDuration > 0) {
+                this._encounterEffectDuration--;
+                this.snapForBattleBackground();
+                BattleManager.playBattleBgm();
+            }
+        } else if ($gameSystem.isSRPGMode() == true && _srpgBattleQuickLaunch == 'true') {
             if (this._encounterEffectDuration > 0) {
                 this._encounterEffectDuration--;
                 var speed = this.encounterEffectSpeed();
                 var n = speed - this._encounterEffectDuration;
+                //if (n === Math.floor(speed / 3)) {
+                //     this.startFlashForEncounter(speed);
+                //}
                 if (n === Math.floor(speed)) {
                     BattleManager.playBattleBgm();
                     this.startFadeOut(this.fadeSpeed() / 2);
@@ -6123,7 +6293,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
         this.makeRewards();
         this._srpgBattleResultWindow.setRewards(this._rewards);
         var se = {};
-        se.name = 'Item3';
+        se.name = _rewardSe;
         se.pan = 0;
         se.pitch = 100;
         se.volume = 90;
