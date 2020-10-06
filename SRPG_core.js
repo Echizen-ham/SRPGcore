@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.30 + Q
-// 最終更新日   : 2020/9/26
+// バージョン   : 1.31 + Q
+// 最終更新日   : 2020/10/6
 // 制作         : 神鏡学斗, Dr. Q
 // 配布元       : http://www.lemon-slice.net/
 // 制作協力 　　: アンチョビ様　
@@ -333,7 +333,6 @@
  *   <srpgWeaponSkill:X># set attack skill ID X. normal attack is skill ID 1.
  *   <srpgCounter:false># set this weapon can't counter attack.
  *   <srpgMovePlus:X>   # change move range X. you can set minus value.
- *   <srpgWRangePlus:X> # change normal attack range X. you can set minus value.
  *   <srpgThroughTag:X> # unit can go through tiles with terrain tags less than X(except for terrain tag 0)
  *
  * armor's note:
@@ -767,7 +766,6 @@
  *   <srpgWeaponSkill:X># 攻撃時に、通常攻撃（スキルID 1）ではなく、Xで設定したＩＤのスキルを発動する武器になります。
  *   <srpgCounter:false># 設定すると、相手からの攻撃に対して反撃しない武器になります（反撃率とは異なる）。
  *   <srpgMovePlus:X>   # Xの分だけ移動力を変化させます。マイナスの値も設定可能です。
- *   <srpgWRangePlus:X> # Xの分だけ通常攻撃の攻撃射程を変化させます。マイナスの値も設定可能です。
  *   <srpgThroughTag:X> # X以下の地形タグが設定されたタイルを通過できます（地形タグ 0 には無効）。
  *
  * 防具のメモ欄:
@@ -1561,7 +1559,7 @@
                     if (event.event().meta.mode) {
                         actor_unit.setBattleMode(event.event().meta.mode);
                         if (event.event().meta.targetId) {
-                            actor_unit.setTargetId(event.event().meta.targetId);
+                            actor_unit.setTargetId(Number(event.event().meta.targetId));
                         }
                     }
                     actor_unit.setSearchItem(event.event().meta.searchItem);
@@ -1588,7 +1586,7 @@
                     if (event.event().meta.mode) {
                         enemy_unit.setBattleMode(event.event().meta.mode);
                         if (event.event().meta.targetId) {
-                            enemy_unit.setTargetId(event.event().meta.targetId);
+                            enemy_unit.setTargetId(Number(event.event().meta.targetId));
                         }
                     }
                     enemy_unit.initTp(); //TPを初期化
@@ -1776,14 +1774,17 @@
         $gameTemp.initialMoveTable(event.posX(), event.posY(), battlerArray[1].srpgMove());
         event.makeMoveTable(event.posX(), event.posY(), battlerArray[1].srpgMove(), [0], battlerArray[1].srpgThroughTag());
         var list = $gameTemp.moveList();
+        if (battlerArray[1].action(0) && battlerArray[1].action(0).item()) {
+            var range = battlerArray[1].srpgSkillRange(battlerArray[1].action(0).item());
+            var item = battlerArray[1].action(0).item();
+        } else {
+            var range = battlerArray[1].srpgWeaponRange();
+            var item = $dataSkills[battlerArray[1].attackSkillId()];
+        }
         for (var i = 0; i < list.length; i++) {
             var pos = list[i];
             var flag = this.areTheyNoUnits(pos[0], pos[1], '');
-            if (battlerArray[1].action(0) && battlerArray[1].action(0).item()) {
-                if (flag == true && _srpgBestSearchRouteSize > 0) event.makeRangeTable(pos[0], pos[1], battlerArray[1].srpgSkillRange(battlerArray[1].action(0).item()), [0], pos[0], pos[1], battlerArray[1].action(0).item());
-            } else {
-                if (flag == true && _srpgBestSearchRouteSize > 0) event.makeRangeTable(pos[0], pos[1], battlerArray[1].srpgWeaponRange(), [0], pos[0], pos[1], $dataSkills[battlerArray[1].attackSkillId()]);
-            }
+            if (flag == true && _srpgBestSearchRouteSize > 0) event.makeRangeTable(pos[0], pos[1], range, [0], pos[0], pos[1], item);
         }
         $gameTemp.pushRangeListToMoveList();
     };
@@ -2257,21 +2258,19 @@
         if (skill && skill.meta.srpgRange == -1) {
             if (!this.hasNoWeapons()) {
                 weapon = this.weapons()[0];
-                range = weapon.meta.weaponRange;
+                range = Number(weapon.meta.weaponRange);
                 // ステートによる変更
                 this.states().forEach(function(state) {
-                    if (state.meta.srpgWRangePlus) {
+                    if (state && state.meta.srpgWRangePlus) {
                         range += Number(state.meta.srpgWRangePlus);
                     }
                 }, this);
                 // 装備による変更
-                var equips = this.equips();
-                for (var i = 0; i < equips.length; i++) {
-                    var item = equips[i];
-                    if (item && item.meta.srpgMovePlus) {
-                        range += Number(item.meta.srpgWRangePlus);
+                this.armors().forEach(function(armor) {
+                    if (armor && armor.meta.srpgWRangePlus) {
+                        range += Number(armor.meta.srpgWRangePlus);
                     }
-                }
+                }, this);
             }
         } else if (skill.meta.srpgRange) {
             range = skill.meta.srpgRange;
@@ -2331,10 +2330,10 @@
             if (skill.meta.srpgRange == -1) {
                 if (!this.hasNoWeapons()) {
                     var weapon = this.weapons()[0];
-                    minRange = weapon.meta.weaponMinRange;
+                    minRange = Number(weapon.meta.weaponMinRange);
                 }
             } else if (skill.meta.srpgMinRange) {
-                minRange = skill.meta.srpgMinRange;
+                minRange = Number(skill.meta.srpgMinRange);
             }
             if (!minRange) {
                 minRange = 0;
@@ -2409,7 +2408,7 @@
         }, this);
         // 装備による変更
         if (!this.hasNoWeapons()) {
-            var item = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var item = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             if (item && item.meta.srpgMovePlus) {
                 n += Number(item.meta.srpgMovePlus);
             }
@@ -2423,14 +2422,14 @@
         var range = 1;
         if (skill && skill.meta.srpgRange == -1) {
             if (!this.hasNoWeapons()) {
-                var weapon = $dataWeapons[this.enemy().meta.srpgWeapon];
-                range = weapon.meta.weaponRange;
+                var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+                range = Number(weapon.meta.weaponRange);
             } else {
-                range = this.enemy().meta.weaponRange;
+                range = Number(this.enemy().meta.weaponRange);
             }
             // ステートによる変更
             this.states().forEach(function(state) {
-                if (state.meta.srpgWRangePlus) {
+                if (state && state.meta.srpgWRangePlus) {
                     range += Number(state.meta.srpgWRangePlus);
                 }
             }, this);
@@ -2450,7 +2449,7 @@
     // 武器が反撃可能かを返す
     Game_Enemy.prototype.srpgWeaponCounter = function() {
         if (!this.hasNoWeapons()) {
-            var weapon = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             var counter = weapon.meta.srpgCounter;
         } else {
             var counter = this.enemy().meta.srpgCounter;
@@ -2477,7 +2476,7 @@
         }, this);
         // 装備
         if (!this.hasNoWeapons()) {
-            var item = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var item = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             if (item && item.meta.srpgThroughTag && n < Number(item.meta.srpgThroughTag)) {
                 n = Number(item.meta.srpgThroughTag);
             }
@@ -2491,13 +2490,13 @@
         if (skill) {
             if (skill.meta.srpgRange == -1) {
                 if (!this.hasNoWeapons()) {
-                    var weapon = $dataWeapons[this.enemy().meta.srpgWeapon];
-                    minRange = weapon.meta.weaponMinRange;
+                    var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
+                    minRange = Number(weapon.meta.weaponMinRange);
                 } else {
-                    minRange = this.enemy().meta.weaponMinRange;
+                    minRange = Number(this.enemy().meta.weaponMinRange);
                 }
             } else if (skill.meta.srpgMinRange) {
-                minRange = skill.meta.srpgMinRange;
+                minRange = Number(skill.meta.srpgMinRange);
             }
             if (!minRange) {
                 minRange = 0;
@@ -2518,7 +2517,7 @@
 
     // 武器を装備しているか返す
     Game_Enemy.prototype.hasNoWeapons = function() {
-        return !$dataWeapons[this.enemy().meta.srpgWeapon];
+        return !$dataWeapons[Number(this.enemy().meta.srpgWeapon)];
     };
 
     // 装備の特徴を反映する
@@ -2526,7 +2525,7 @@
     Game_Enemy.prototype.traitObjects = function() {
         var objects = _SRPG_Game_Enemy_traitObjects.call(this);
         if ($gameSystem.isSRPGMode() == true) {
-            var item = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var item = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             if (item) {
                 objects.push(item);
             }
@@ -2538,7 +2537,7 @@
     Game_Enemy.prototype.paramPlus = function(paramId) {
         var value = Game_Battler.prototype.paramPlus.call(this, paramId);
         if ($gameSystem.isSRPGMode() == true) {
-            var item = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var item = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             if (item) {
                 value += item.params[paramId];
             }
@@ -2551,7 +2550,7 @@
         if (this.hasNoWeapons()) {
             return this.bareHandsAnimationId();
         } else {
-            var weapons = $dataWeapons[this.enemy().meta.srpgWeapon];
+            var weapons = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
             return weapons ? weapons.animationId : 1;
         }
     };
@@ -2563,7 +2562,7 @@
 
     // attackSkillId == 1 以外の武器を作る
     Game_Enemy.prototype.attackSkillId = function() {
-        var weapon = $dataWeapons[this.enemy().meta.srpgWeapon];
+        var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
         if (weapon && weapon.meta.srpgWeaponSkill) {
             return Number(weapon.meta.srpgWeaponSkill);
         } else {
@@ -3442,7 +3441,7 @@
                 this.setImage(unit.characterName(), unit.characterIndex());
             } else if (type === 'enemy') {
                 var characterName = unit.enemy().meta.characterName;
-                var characterIndex = unit.enemy().meta.characterIndex;
+                var characterIndex = Number(unit.enemy().meta.characterIndex);
                 if (!characterName || !characterIndex) {
                     var characterName = 'monster.png';
                     var characterIndex = 0;
@@ -4009,7 +4008,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     // エネミーの顔グラフィックを描画する
     Window_Base.prototype.drawEnemyFace = function(enemy, x, y, width, height) {
         var faceName = enemy.enemy().meta.faceName;
-        var faceIndex = enemy.enemy().meta.faceIndex;
+        var faceIndex = Number(enemy.enemy().meta.faceIndex);
         if (!faceName || !faceIndex) {
             this.drawEnemyFaceWhenNoFace(enemy, x, y, width, height);
         } else {
@@ -4043,7 +4042,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
 
     // エネミーの装備（武器）を描画する
     Window_Base.prototype.drawEnemySrpgEqiup = function(enemy, x, y) {
-        var item = $dataWeapons[enemy.enemy().meta.srpgWeapon];
+        var item = $dataWeapons[Number(enemy.enemy().meta.srpgWeapon)];
         this.changeTextColor(this.systemColor());
         this.drawText(_textSrpgEquip, x, y, 92);
         this.resetTextColor();
@@ -4717,7 +4716,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                     if (actor.isActor()) {
                         var item = actor.weapons()[0];
                     } else {
-                        var item = $dataWeapons[actor.enemy().meta.srpgWeapon];
+                        var item = $dataWeapons[Number(actor.enemy().meta.srpgWeapon)];
                     }
                     this.drawItemName(item, x, y, 280 - costWidth);
                 } else {
@@ -6227,9 +6226,9 @@ Window_WinLoseCondition.prototype.refresh = function() {
         }
         this.preBattleSetDirection();
         //行動回数追加スキルなら行動回数を追加する
-        var addActionNum = actionArray[1].action(0).item().meta.addActionTimes;
-        if (addActionNum && Number(addActionNum) > 0) {
-            actionArray[1].SRPGActionTimesAdd(Number(addActionNum));
+        var addActionNum = Number(actionArray[1].action(0).item().meta.addActionTimes);
+        if (addActionNum && addActionNum > 0) {
+            actionArray[1].SRPGActionTimesAdd(addActionNum);
         }
         this._callSrpgBattle = true;
         this.eventBeforeBattle();
