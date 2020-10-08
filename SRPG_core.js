@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.31 + Q
-// 最終更新日   : 2020/10/6
+// バージョン   : 1.32 + Q
+// 最終更新日   : 2020/10/8
 // 制作         : 神鏡学斗, Dr. Q
 // 配布元       : http://www.lemon-slice.net/
 // 制作協力 　　: アンチョビ様　
@@ -2330,20 +2330,16 @@
             if (skill.meta.srpgRange == -1) {
                 if (!this.hasNoWeapons()) {
                     var weapon = this.weapons()[0];
-                    minRange = Number(weapon.meta.weaponMinRange);
+                    minRange = weapon.meta.weaponMinRange;
                 }
             } else if (skill.meta.srpgMinRange) {
-                minRange = Number(skill.meta.srpgMinRange);
+                minRange = skill.meta.srpgMinRange;
             }
-            if (!minRange) {
-                minRange = 0;
-            }
+            if (!minRange) minRange = 0;
         } else {
             minRange = 0;
         }
-        if (minRange > this.srpgSkillRange(skill)) {
-            minRange = this.srpgSkillRange(skill);
-        }
+        if (Number(minRange) > this.srpgSkillRange(skill)) minRange = this.srpgSkillRange(skill);
         return Number(minRange);
     };
 
@@ -2491,22 +2487,18 @@
             if (skill.meta.srpgRange == -1) {
                 if (!this.hasNoWeapons()) {
                     var weapon = $dataWeapons[Number(this.enemy().meta.srpgWeapon)];
-                    minRange = Number(weapon.meta.weaponMinRange);
+                    minRange = weapon.meta.weaponMinRange;
                 } else {
-                    minRange = Number(this.enemy().meta.weaponMinRange);
+                    minRange = this.enemy().meta.weaponMinRange;
                 }
             } else if (skill.meta.srpgMinRange) {
-                minRange = Number(skill.meta.srpgMinRange);
+                minRange = skill.meta.srpgMinRange;
             }
-            if (!minRange) {
-                minRange = 0;
-            }
+            if (!minRange) minRange = 0;
         } else {
             minRange = 0;
         }
-        if (minRange > this.srpgSkillRange(skill)) {
-            minRange = this.srpgSkillRange(skill);
-        }
+        if (Number(minRange) > this.srpgSkillRange(skill)) minRange = this.srpgSkillRange(skill);
         return Number(minRange);
     };
 
@@ -3442,10 +3434,6 @@
             } else if (type === 'enemy') {
                 var characterName = unit.enemy().meta.characterName;
                 var characterIndex = Number(unit.enemy().meta.characterIndex);
-                if (!characterName || !characterIndex) {
-                    var characterName = 'monster.png';
-                    var characterIndex = 0;
-                }
                 this.setImage(characterName, characterIndex);
             } else if (type === 'null') {
                 this.erase();
@@ -4009,7 +3997,7 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
     Window_Base.prototype.drawEnemyFace = function(enemy, x, y, width, height) {
         var faceName = enemy.enemy().meta.faceName;
         var faceIndex = Number(enemy.enemy().meta.faceIndex);
-        if (!faceName || !faceIndex) {
+        if (!faceName) {
             this.drawEnemyFaceWhenNoFace(enemy, x, y, width, height);
         } else {
             this.drawFace(faceName, faceIndex, x, y, width, height);
