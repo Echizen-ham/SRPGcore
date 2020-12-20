@@ -1,6 +1,6 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.32 + Q
+// バージョン   : 1.33 + Q
 // 最終更新日   : 2020/10/8
 // 制作         : 神鏡学斗, Dr. Q
 // 配布元       : http://www.lemon-slice.net/
@@ -161,8 +161,8 @@
  * @type switch
  * @default 0
  *
- * @param Animation Delay(Map Battle)
- * @desc Frames between animation start and skill effect
+ * @param Animation Delay
+ * @desc Frames between animation start and skill effect(Map Battle)
  * Set to -1 to wait for all animations to finish
  * @type number
  * @min -1
@@ -363,26 +363,27 @@
  *   <srpgThroughTag:X> # unit can go through tiles with terrain tags less than X(except for terrain tag 0)
  *
  * Event command => script:
- *   this.EventDistance(VariableID, EventID, EventID); # Store the distance between events in a variable.
- *   this.ActorDistance(VariableID, ActorID, ActorID); # Store the distance between actors in a variable.
- *   this.playerMoveTo(X, Y);            # Move the cursor (player) to the coordinates (X, Y).
- *   this.addActor(EventID, ActorID);    # Make the event with the specified ID the actor.
- *   this.addEnemy(EventID, EnemyID);    # Make the event with the specified ID the enemy.
- *   this.setBattleMode(EventID, 'mode');# Change the acting pattern of the event with the specified ID.
- *   this.setTargetId(EventID, ID);      # Change the target ID of the event with the specified ID.
+ *   this.EventDistance(VariableID, EventID, EventID);   # Store the distance between events in a variable.
+ *   this.ActorDistance(VariableID, ActorID, ActorID);   # Store the distance between actors in a variable.
+ *   this.playerMoveTo(X, Y);                            # Move the cursor (player) to the coordinates (X, Y).
+ *   this.addActor(EventID, ActorID);                    # Make the event with the specified ID the actor.
+ *   this.addEnemy(EventID, EnemyID);                    # Make the event with the specified ID the enemy.
+ *   this.setBattleMode(EventID, 'mode');                # Change the acting pattern of the event with the specified ID.
+ *   this.setTargetId(EventID, ID);                      # Change the target ID of the event with the specified ID.
  *   this.fromActorMinimumDistance(VariableID, EventID); # Stores the distance between the specified event and the nearest actor
  *                                                       # among all actors in the variable.
- *   this.isUnitDead(SwitchID, EventID); # Stores in the switch whether the event with the specified ID is dead or not.
- *   this.isEventIdXy(VariableID, X, Y); # Stores the event ID of the specified coordinates (X, Y) in the variable.
- *   this.checkRegionId(switcheID, regionID); # Stores in the switch whether an actor is on the specified region ID.
- *   this.unitRecoverAll(EventID);       # Full recovery of the unit with the specified event ID (only when it is alive).
- *   this.unitRevive(EventID);           # Revive of the unit with the specified event ID (only when it is dead).
- *   this.unitAddState(EventId, StateId);# Add the state of the ID specified to the unit with the specified event ID.
- *   this.turnEnd();                     # End player's turn(Same 'Turn End' in menu).
- *   this.isSubPhaseNormal(SwitchID);    # Whether the player selects the unit to be operated (ON is the same as when the menu can be opened). 
- *   $gameSystem.clearSrpgWinLoseCondition();    # Reset the win / loss conditions. Execute before setting a new condition.
- *   $gameSystem.setSrpgWinCondition('text');    # Set win conditions. If you want to describe multiple conditions, execute it multiple times.
- *   $gameSystem.setSrpgLoseCondition('text');   # Set lose conditions. If you want to describe multiple conditions, execute it multiple times.
+ *   this.isUnitDead(SwitchID, EventID);                 # Stores in the switch whether the event with the specified ID is dead or not.
+ *   this.isEventIdXy(VariableID, X, Y);                 # Stores the event ID of the specified coordinates (X, Y) in the variable.
+ *   this.checkRegionId(switcheID, regionID);            # Stores in the switch whether an actor is on the specified region ID.
+ *   this.unitRecoverAll(EventID);                       # Full recovery of the unit with the specified event ID (only when it is alive).
+ *   this.unitRevive(EventID);                           # Revive of the unit with the specified event ID (only when it is dead).
+ *   this.unitAddState(EventId, StateId);                # Add the state of the ID specified to the unit with the specified event ID.
+ *   this.unitRemoveState(EventId, StateId);             # Remove the state of the ID specified of unit with the specified event ID.
+ *   this.turnEnd();                                     # End player's turn(Same 'Turn End' in menu).
+ *   this.isSubPhaseNormal(SwitchID);                    # Whether the player selects the unit to be operated (ON is the same as when the menu can be opened). 
+ *   $gameSystem.clearSrpgWinLoseCondition();            # Reset the win / loss conditions. Execute before setting a new condition.
+ *   $gameSystem.setSrpgWinCondition('text');            # Set win conditions. If you want to describe multiple conditions, execute it multiple times.
+ *   $gameSystem.setSrpgLoseCondition('text');           # Set lose conditions. If you want to describe multiple conditions, execute it multiple times.
  *
  * Dr. Q's modifications:
  * - new windows, sprites, etc. are made available to extension plugins
@@ -594,8 +595,8 @@
  * @type switch
  * @default 0
  *
- * @param Animation Delay(Map Battle)
- * @desc アニメーション開始とスキル効果の表示までの待ち時間
+ * @param Animation Delay
+ * @desc アニメーション～効果表示までの待ち時間(Map Battle)
  * -1に設定すると、アニメーションが完了するまで待つ
  * @type number
  * @min -1
@@ -794,26 +795,26 @@
  *   <srpgThroughTag:X> # X以下の地形タグが設定されたタイルを通過できます（地形タグ 0 には無効）。
  *
  * イベントコマンド => スクリプト:
- *   this.EventDistance(VariableID, EventID, EventID); # 指定したＩＤのイベント間の距離を変数に格納します。
- *   this.ActorDistance(VariableID, ActorID, ActorID); # 指定したＩＤのアクター間の距離を変数に格納します。
- *   this.playerMoveTo(X, Y);            # カーソル（プレイヤー）を座標(X,Y)に移動させます。
- *   this.addActor(EventID, ActorID);    # 指定したＩＤのイベントをアクターにします。
- *   this.addEnemy(EventID, EnemyID);    # 指定したＩＤのイベントをエネミーにします。
- *   this.setBattleMode(EventID, 'mode');# 指定したＩＤのイベントの行動パターンを変更します。
- *   this.setTargetId(EventID, ID);      # 指定したＩＤのイベントのターゲットＩＤを変更します。
- *   this.fromActorMinimumDistance(VariableID, EventID); # 指定したイベントと全てのアクターの中で
- *                                                       # 最も近いアクターとの距離を変数に格納します。
- *   this.isUnitDead(SwitchID, EventID); # 指定したＩＤのイベントが戦闘不能かどうかをスイッチに格納します。
- *   this.isEventIdXy(VariableID, X, Y); # 指定した座標(X, Y)のイベントＩＤを変数に格納します。
- *   this.checkRegionId(switcheID, regionID); # 指定したリージョンID上にアクターがいるか判定してスイッチに格納します。
- *   this.unitRecoverAll(EventID);       # 指定したイベントＩＤのユニットを全回復します（生存している時のみ）。
- *   this.unitRevive(EventID);           # 指定したイベントＩＤのユニットを復活します（戦闘不能時のみ）。
- *   this.unitAddState(EventId, StateId);# 指定したイベントＩＤのユニットに指定したＩＤのステートを付与します。
- *   this.turnEnd();                     # プレイヤーのターンを終了します（メニューの「ターン終了」と同じ機能）
- *   this.isSubPhaseNormal(SwitchID);    # 操作するユニットを選択する状態かをスイッチに格納します（ONだとメニューが開ける状態と同じ）。
- *   $gameSystem.clearSrpgWinLoseCondition();    # 勝敗条件をリセットします。新しい条件を設定する前に実行してください。
- *   $gameSystem.setSrpgWinCondition('text');    # 勝利条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
- *   $gameSystem.setSrpgLoseCondition('text');   # 敗北条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
+ *   this.EventDistance(VariableID, EventID, EventID);   # 指定したＩＤのイベント間の距離を変数に格納します。
+ *   this.ActorDistance(VariableID, ActorID, ActorID);   # 指定したＩＤのアクター間の距離を変数に格納します。
+ *   this.playerMoveTo(X, Y);                            # カーソル（プレイヤー）を座標(X,Y)に移動させます。
+ *   this.addActor(EventID, ActorID);                    # 指定したＩＤのイベントをアクターにします。
+ *   this.addEnemy(EventID, EnemyID);                    # 指定したＩＤのイベントをエネミーにします。
+ *   this.setBattleMode(EventID, 'mode');                # 指定したＩＤのイベントの行動パターンを変更します。
+ *   this.setTargetId(EventID, ID);                      # 指定したＩＤのイベントのターゲットＩＤを変更します。
+ *   this.fromActorMinimumDistance(VariableID, EventID); # 指定したイベントと全てのアクターの中で最も近いアクターとの距離を変数に格納します。
+ *   this.isUnitDead(SwitchID, EventID);                 # 指定したＩＤのイベントが戦闘不能かどうかをスイッチに格納します。
+ *   this.isEventIdXy(VariableID, X, Y);                 # 指定した座標(X, Y)のイベントＩＤを変数に格納します。
+ *   this.checkRegionId(switcheID, regionID);            # 指定したリージョンID上にアクターがいるか判定してスイッチに格納します。
+ *   this.unitRecoverAll(EventID);                       # 指定したイベントＩＤのユニットを全回復します（生存している時のみ）。
+ *   this.unitRevive(EventID);                           # 指定したイベントＩＤのユニットを復活します（戦闘不能時のみ）。
+ *   this.unitAddState(EventId, StateId);                # 指定したイベントＩＤのユニットに指定したＩＤのステートを付与します。
+ *   this.unitRemoveState(EventId, StateId);             # 指定したイベントＩＤのユニットの指定したＩＤのステートを解除します。
+ *   this.turnEnd();                                     # プレイヤーのターンを終了します（メニューの「ターン終了」と同じ機能）
+ *   this.isSubPhaseNormal(SwitchID);                    # 操作するユニットを選択する状態かをスイッチに格納します（ONだとメニューが開ける状態と同じ）。
+ *   $gameSystem.clearSrpgWinLoseCondition();            # 勝敗条件をリセットします。新しい条件を設定する前に実行してください。
+ *   $gameSystem.setSrpgWinCondition('text');            # 勝利条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
+ *   $gameSystem.setSrpgLoseCondition('text');           # 敗北条件をセットします（textに文字列）。複数の条件を記述する場合は、複数回実行してください。
  *
  *
  * == マップバトル ======================================================================
@@ -1993,6 +1994,7 @@
                 (this.srpgSkillRange(item) < $gameTemp.SrpgDistance() ||
                 this.srpgSkillMinRange(item) > $gameTemp.SrpgDistance() ||
                 this.SrpgSpecialRange(item) == false ||
+                this.isTargetInRange(item) == false ||
                 (this._srpgActionTiming == 1 && this.srpgWeaponCounter() == false) ||
                 (item.meta.notUseAfterMove && ($gameTemp.originalPos()[0] != $gameTemp.activeEvent().posX() ||
                  $gameTemp.originalPos()[1] != $gameTemp.activeEvent().posY()))
@@ -2001,6 +2003,20 @@
             }
         }
         return _SRPG_Game_BattlerBase_canUse.call(this, item);
+    };
+
+
+    // 対象のイベントが射程範囲内にいるかの判定
+    Game_BattlerBase.prototype.isTargetInRange = function(item) {
+        var rangeList = $gameTemp.rangeList();
+        var target = $gameTemp.targetEvent();
+        if (item.scope === 11) return true;
+        if (!target) return false;
+        for (var i = 0; i < rangeList.length; i++) {
+            var pos =  rangeList[i];
+            if (target.posX() == pos[0] && target.posY() == pos[1]) return true;
+        }
+        return false;
     };
 
     // ステートのターン経過処理（ＳＲＰＧ用）
@@ -2851,9 +2867,9 @@
         if (this.isSrpgCollidedWithEvents(x2, y2)) {
             return false;
         }
-        if (this.isThrough()) {
-            return true;
-        }
+        //if (this.isThrough()) {
+        //    return true;
+        //}
         if (($gameMap.terrainTag(x2, y2) > 0 && $gameMap.terrainTag(x2, y2) <= tag) ||
             ($gameMap.terrainTag(x, y) > 0 && $gameMap.terrainTag(x, y) <= tag &&
              $gameMap.isPassable(x2, y2, this.reverseDir(d)))) {
@@ -3097,42 +3113,46 @@
             }
         }
     };
-/*
+
     //移動可能かを判定する（イベント出現時用）
-    Game_CharacterBase.prototype.srpgAppearCanPass = function(x, y, d) {
+    Game_CharacterBase.prototype.srpgAppearCanPass = function(x, y, d, tag) {
         var x2 = $gameMap.roundXWithDirection(x, d);
         var y2 = $gameMap.roundYWithDirection(y, d);
         if (!$gameMap.isValid(x2, y2)) {
             return false;
+        }
+        if (($gameMap.terrainTag(x2, y2) > 0 && $gameMap.terrainTag(x2, y2) <= tag) ||
+            ($gameMap.terrainTag(x, y) > 0 && $gameMap.terrainTag(x, y) <= tag &&
+             $gameMap.isPassable(x2, y2, this.reverseDir(d)))) {
+            return true;
         }
         if (!this.isMapPassable(x, y, d)) {
             return false;
         }
         return true;
     };
-*/
 
     //出現可能場所の計算
-    Game_CharacterBase.prototype.makeAppearPoint = function(event, x, y, tag) {
+    Game_CharacterBase.prototype.makeAppearPoint = function(event, x, y, tag, previous) {
         var events = $gameMap.eventsXyNt(x, y);
         if (events.length == 0 || (events.length == 1 && events[0] == event)) {
             return [x,y];
         }
         //上方向を探索
-        if (this.srpgMoveCanPass(x, y, 8, tag)) {
-            return this.makeAppearPoint(event, x, y - 1, tag);
+        if (this.srpgAppearCanPass(x, y, 8, tag) && previous !== 2) {
+            return this.makeAppearPoint(event, x, y - 1, tag, 8);
         }
         //右方向を探索
-        if (this.srpgMoveCanPass(x, y, 6, tag)) {
-            return this.makeAppearPoint(event, x + 1, y, tag);
+        if (this.srpgAppearCanPass(x, y, 6, tag) && previous !== 4) {
+            return this.makeAppearPoint(event, x + 1, y, tag, 6);
         }
         //左方向を探索
-        if (this.srpgMoveCanPass(x, y, 4, tag)) {
-            return this.makeAppearPoint(event, x - 1, y, tag);
+        if (this.srpgAppearCanPass(x, y, 4, tag) && previous !== 6) {
+            return this.makeAppearPoint(event, x - 1, y, tag, 4);
         }
         //下方向を探索
-        if (this.srpgMoveCanPass(x, y, 2, tag)) {
-            return this.makeAppearPoint(event, x, y + 1, tag);
+        if (this.srpgAppearCanPass(x, y, 2, tag) && previous !== 8) {
+            return this.makeAppearPoint(event, x, y + 1, tag, 2);
         }
     };
 
@@ -3720,6 +3740,17 @@ Game_Interpreter.prototype.unitAddState = function(eventId, stateId) {
                 }
             }
         }
+        battlerArray[1].clearResult();
+    }
+    return true;
+};
+
+// 指定したイベントＩＤのユニットを指定したステートを解除する
+Game_Interpreter.prototype.unitRemoveState = function(eventId, stateId) {
+    var battlerArray = $gameSystem.EventToUnit(eventId);
+    var event = $gameMap.event(eventId);
+    if (battlerArray && event && (battlerArray[0] === 'actor' || battlerArray[0] === 'enemy')) {
+        battlerArray[1].removeState(stateId);
         battlerArray[1].clearResult();
     }
     return true;
@@ -6391,6 +6422,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
         this._srpgBattleStatusWindowLeft = null;
         this._srpgBattleStatusWindowRight = null;
         this._srpgBattleResultWindow = null;
+        this._srpgBattleResultWindowCount = 0;
     };
 
     //ステータスウィンドウのセット
@@ -6535,6 +6567,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
         se.volume = 90;
         AudioManager.playSe(se);
         this._srpgBattleResultWindow.open();
+        this._srpgBattleResultWindowCount = 60;
         this.gainRewards();
     };
 
@@ -6567,9 +6600,12 @@ Window_WinLoseCondition.prototype.refresh = function() {
             if ($gameSystem.isSubBattlePhase() === 'after_battle') {
                 SceneManager.pop();
                 this._phase = null;
-            } else if (this._srpgBattleResultWindow.isChangeExp() == false &&
-                (Input.isPressed('ok') || TouchInput.isPressed())) {
-                this.endBattle(3);
+            } else if (this._srpgBattleResultWindow.isChangeExp() == false) {
+                if (this._srpgBattleResultWindowCount <= 0 ||
+                    Input.isPressed('ok') || TouchInput.isPressed()) {
+                    this.endBattle(3);
+                }
+                this._srpgBattleResultWindowCount -= 1;
             }
         } else {
             _SRPG_BattleManager_updateBattleEnd.call(this);
@@ -6738,6 +6774,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
 		// pre-skill setup
 		$gameSystem.clearSrpgStatusWindowNeedRefresh();
 		$gameSystem.clearSrpgBattleWindowNeedRefresh();
+		this._srpgBattleResultWindowCount = 0;
 
 		// make free actions work
 		var addActionTimes = Number(action.item().meta.addActionTimes || 0);
@@ -6829,11 +6866,14 @@ Window_WinLoseCondition.prototype.refresh = function() {
 				if ($gameTroop.members()[1] && $gameTroop.members()[1].isAlive()) $gameTroop.members()[1].onAllActionsEnd();
 				var showResults = this.processSrpgVictory();
 				if (!showResults) $gameSystem.setSubBattlePhase('after_battle');
-			} else if (this._srpgBattleResultWindow.isOpen() &&
-			(Input.isPressed('ok') || Input.isPressed('cancel') ||
-			TouchInput.isPressed() || TouchInput.isCancelled())) {
-				this._srpgBattleResultWindow.close();
-				$gameSystem.setSubBattlePhase('after_battle');
+			} else if (this._srpgBattleResultWindow.isOpen()) {
+				if (Input.isPressed('ok') || Input.isPressed('cancel') ||
+				TouchInput.isPressed() || TouchInput.isCancelled() ||
+				this._srpgBattleResultWindowCount <= 0) {
+					this._srpgBattleResultWindow.close();
+					$gameSystem.setSubBattlePhase('after_battle');
+				}
+				this._srpgBattleResultWindowCount -= 1;
 			}
 		} else {
 			// time-based waiting
@@ -6880,6 +6920,8 @@ Window_WinLoseCondition.prototype.refresh = function() {
 			if (!target) return false;
 			if (target.isAnimationPlaying() || !target.isStopping()) return true;
 		} else if (this.skillWait() > 0) return true;
+
+		if (this._waitCount > 0) return true;
 
 		return false;
 	};
@@ -7065,7 +7107,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
 			case 'end':
 				user.setLastTarget(target);
 				user.removeCurrentAction();
-				this._waitCount = 30;
+				this._waitCount = 20;
 				break;
 		}
 
@@ -7165,6 +7207,7 @@ Window_WinLoseCondition.prototype.refresh = function() {
 				se.volume = 90;
 				AudioManager.playSe(se);
 				this._srpgBattleResultWindow.open();
+				this._srpgBattleResultWindowCount = 60;
 				this.gainRewards();
 				return true;
 			}
