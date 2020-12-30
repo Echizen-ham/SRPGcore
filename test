@@ -2027,6 +2027,7 @@
             $gameVariables.setValue(_existEnemyVarID, oldValue - 1);
         }
     };
+
     // 「隠れ」解除時に存在するユニット数を増やす
     var _SRPG_Game_BattlerBase_appear = Game_BattlerBase.prototype.appear;
     Game_BattlerBase.prototype.appear = function() {
