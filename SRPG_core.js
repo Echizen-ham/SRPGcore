@@ -1,7 +1,7 @@
 //=============================================================================
 // SRPG_core.js -SRPGコンバータMV-
-// バージョン   : 1.33 + Q
-// 最終更新日   : 2020/10/8
+// バージョン   : 1.34 + Q
+// 最終更新日   : 2021/1/3
 // 制作         : 神鏡学斗, Dr. Q
 // 配布元       : http://www.lemon-slice.net/
 // 制作協力 　　: アンチョビ様　
@@ -17,132 +17,71 @@
  * @plugindesc SRPG battle system (tactical battle system) on map.
  * @author Gakuto Mikagami, Dr. Q
  *
+ * @param BasicParam
+ * @desc Set basic parameters such as specifying the switch / variable to be used and setting the plug-in to be used together.
+ * @default Basic functions related to the whole
+ * 
+ * @param WithYEP_BattleEngineCore
+ * @parent BasicParam
+ * @desc Set true when using with YEP_BattleEngineCore.
+ * @type boolean
+ * @default false
+ *
+ * @param WithCommunityBasic_CoreScript
+ * @parent BasicParam
+ * @desc Set true when using with the community version core script published in Atsmaru.
+ * @type boolean
+ * @default false
+ *
  * @param srpgTroopID
+ * @parent BasicParam
  * @desc SRPGconverter use this troop ID.
  * @type number
  * @min 1
  * @default 1
  *
  * @param srpgBattleSwitchID
+ * @parent BasicParam
  * @desc switch ID of 'in tactical battle' or 'not'. If using tactical battle system, this swith turn on。
  * @type switch
  * @default 1
  *
  * @param existActorVarID
+ * @parent BasicParam
  * @desc variable ID of 'exist actor'. Exist is not death state and hide。
  * @type variable
  * @default 1
  *
  * @param existEnemyVarID
+ * @parent BasicParam
  * @desc variable ID of 'exist enemy'. Exist is not death state and hide。
  * @type variable
  * @default 2
  *
  * @param turnVarID
+ * @parent BasicParam
  * @desc variable ID of 'srpg turn'. first turn is 'turn 1'。
  * @type variable
  * @default 3
  *
  * @param activeEventID
+ * @parent BasicParam
  * @desc variable ID of 'acting event ID'.
  * @type variable
  * @default 4
  *
  * @param targetEventID
+ * @parent BasicParam
  * @desc variable ID of 'target event ID'. not only attack but also heal or assist.
  * @type variable
  * @default 5
  *
- * @param maxActorVarID
- * @desc variable ID of the maximum number of actors participating in the battle. Set to 0 to disable.
- * @type variable
- * @default 0
- *
- * @param defaultMove
- * @desc use this parameter if you don't set move in class or enemy note.
- * @type number
- * @min 0
- * @default 4
- *
- * @param srpgBattleExpRate
- * @desc if player can't defeat enemy, player get exp in this rate. set 0 to 1.0.
- * @type number
- * @decimals 2
- * @min 0
- * @max 1
- * @default 0.4
- *
- * @param srpgBattleExpRateForActors
- * @desc if player act for friends,player get exp in this rate(to next level). set 0 to 1.0. 
- * @type number
- * @decimals 2
- * @min 0
- * @max 1
- * @default 0.1
- *
- * @param srpgBattleQuickLaunch
- * @desc true is quick the battle start effect.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgActorCommandEquip
- * @desc true is add command 'equip' in actor command.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgWinLoseConditionCommand
- * @desc true is add command 'Win / Lose Condetion' in menu command.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgBattleEndAllHeal
- * @desc all heal actors when tactical battle end.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgPredictionWindowMode
- * @desc Change the display of the battle prediction window. (1: full / 2: only attack name / 3: not displayed)
- * @type select
- * @option Full
- * @value 1
- * @option Only attack name
- * @value 2
- * @option Not displayed
- * @value 3
- * @default 1
- *
- * @param srpgAutoBattleStateId
- * @desc A state ID to be given when auto battle is selected. State is "automatic battle" & canceled 1 action(invalidated by 0).
- * @type state
- * @default 14
- *
- * @param srpgBestSearchRouteSize
- * @desc If there is no target can be attacked, the closest route is searched. This is a searchable distance(invalidated by 0).
- * @type number
- * @min 0
- * @default 20
- *
- * @param srpgDamageDirectionChange
- * @desc When attacked, correct the direction towards the attacker.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgSkipTargetForSelf
- * @desc For actions targeting oneself, skip the target selection process.(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgRangeTerrainTag7
- * @desc Make the terrain tag 7 that does not pass the range.(true / false)
- * @type boolean
- * @default true
- *
- * @param WithYEP_BattleEngineCore
- * @desc Set true if you use YEP_BattleEngineCore.
- * @type boolean
- * @default false
- *
+ * @param MapBattle
+ * @desc Parameters related to map battles.
+ * @default Map battle settings
+ * 
  * @param Use Map Battle
+ * @parent MapBattle
  * @desc Default Map Battle usage
  * @type select
  * @option Always
@@ -156,19 +95,98 @@
  * @default 3
  *
  * @param Map Battle Switch
+ * @parent MapBattle
  * @parent Use Map Battle
  * @desc Switch that activates map battle
  * @type switch
  * @default 0
  *
  * @param Animation Delay
+ * @parent MapBattle
  * @desc Frames between animation start and skill effect(Map Battle)
  * Set to -1 to wait for all animations to finish
  * @type number
  * @min -1
- * @default 25
+ * @default -1
+ *
+ * @param BattleBasicParam
+ * @desc Set basic numerical values such as move and acquisition rate of exp.
+ * @default Basic numbers used in battle
+ *
+ * @param defaultMove
+ * @parent BattleBasicParam
+ * @desc use this parameter if you don't set move in class or enemy note.
+ * @type number
+ * @min 0
+ * @default 4
+ *
+ * @param srpgBattleExpRate
+ * @parent BattleBasicParam
+ * @desc if player can't defeat enemy, player get exp in this rate. set 0 to 1.0.
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
+ * @default 0.4
+ *
+ * @param srpgBattleExpRateForActors
+ * @parent BattleBasicParam
+ * @desc if player act for friends,player get exp in this rate(to next level). set 0 to 1.0. 
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
+ * @default 0.1
+ *
+ * @param maxActorVarID
+ * @parent BattleBasicParam
+ * @desc variable ID of the maximum number of actors participating in the battle. Set to 0 to disable.
+ * @type variable
+ * @default 0
+ *
+ * @param srpgAutoBattleStateId
+ * @parent BattleBasicParam
+ * @desc A state ID to be given when auto battle is selected. State is "automatic battle" & canceled 1 action(invalidated by 0).
+ * @type state
+ * @default 14
+ *
+ * @param srpgBestSearchRouteSize
+ * @parent BattleBasicParam
+ * @desc If there is no target can be attacked, the closest route is searched. This is a searchable distance(invalidated by 0).
+ * @type number
+ * @min 0
+ * @default 20
+ *
+ * @param BattleExtensionParam
+ * @desc Set extended functions such as screen effects and changing actor commands.
+ * @default Extended battle capabilities
+ * 
+ * @param srpgActorCommandEquip
+ * @parent BattleExtensionParam
+ * @desc true is add command 'equip' in actor command.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgWinLoseConditionCommand
+ * @parent BattleExtensionParam
+ * @desc true is add command 'Win / Lose Condetion' in menu command.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgPredictionWindowMode
+ * @parent BattleExtensionParam
+ * @desc Change the display of the battle prediction window. (1: full / 2: only attack name / 3: not displayed)
+ * @type select
+ * @option Full
+ * @value 1
+ * @option Only attack name
+ * @value 2
+ * @option Not displayed
+ * @value 3
+ * @default 1
  *
  * @param useAgiAttackPlus
+ * @parent BattleExtensionParam
  * @desc Use the mechanism that the one with higher agility attacks twice.
  * @type boolean
  * @default true
@@ -180,57 +198,108 @@
  * @min 1
  * @default 2
  *
+ * @param srpgBattleQuickLaunch
+ * @parent BattleExtensionParam
+ * @desc true is quick the battle start effect.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgBattleEndAllHeal
+ * @parent BattleExtensionParam
+ * @desc all heal actors when tactical battle end.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgDamageDirectionChange
+ * @parent BattleExtensionParam
+ * @desc When attacked, correct the direction towards the attacker.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgSkipTargetForSelf
+ * @parent BattleExtensionParam
+ * @desc For actions targeting oneself, skip the target selection process.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgRangeTerrainTag7
+ * @parent BattleExtensionParam
+ * @desc Make the terrain tag 7 that does not pass the range.(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param SRPGTerm
+ * @desc Set terms such as "standby" and "move".
+ * @default Terms used in SRPG battle
+ *
  * @param enemyDefaultClass
+ * @parent SRPGTerm
  * @desc If you don't set class in enemy note, use this name.
  * @default Enemy
  *
  * @param textSrpgEquip
+ * @parent SRPGTerm
  * @desc Name of weapon. Used in SRPG state window.
  * @default Weapon
  *
+ * @param textSrpgNone
+ * @parent SRPGTerm
+ * @desc Term for nothing equipped on a unit.
+ * @default None
+ *
  * @param textSrpgMove
+ * @parent SRPGTerm
  * @desc Name of move range. Used in SRPG state window.
  * @default Move
  *
  * @param textSrpgRange
+ * @parent SRPGTerm
  * @desc Name of attack range. Used in SRPG state window.
  * @default Range
  *
  * @param textSrpgWait
- * @desc Name of stand. Used in SRPG state window.
- * @default Stand
+ * @parent SRPGTerm
+ * @desc Name of standby. Used in SRPG state window.
+ * @default Standby
  *
  * @param textSrpgWinLoseCondition
+ * @parent SRPGTerm
  * @desc A term used to describe the win / loss conditions. It is displayed in the menu command window.
  * @default Win / loss conditions
  *
  * @param textSrpgWinCondition
+ * @parent SRPGTerm
  * @desc A term used to describe the win conditions. It is displayed in the win / loss conditions window.
  * @default Win conditions
  *
  * @param textSrpgLoseCondition
+ * @parent SRPGTerm
  * @desc A term used to describe the loss conditions. It is displayed in the win / loss conditions window.
  * @default Loss conditions
  *
  * @param textSrpgTurnEnd
+ * @parent SRPGTerm
  * @desc Name of turn end. Used in menu window.
  * @default Turn End
  *
  * @param textSrpgAutoBattle
+ * @parent SRPGTerm
  * @desc Name of auto battle. Used in menu window.
  * @default Auto Battle
  *
  * @param textSrpgDamage
+ * @parent SRPGTerm
  * @desc Name of damage in the prediction window.
  * @default Damage
  *
  * @param textSrpgHealing
+ * @parent SRPGTerm
  * @desc Name of healing in the prediction window.
  * @default Healing
  *
- * @param textSrpgNone
- * @desc Term for nothing equipped on a unit.
- * @default None
+ * @param SRPGFiles
+ * @desc Specify images and sound effects to use in battle.
+ * @default Image and SE settings used in SRPG battles
  *
  * @param srpgSet
  * @desc Spriteset for cursor and SRPG system icons
@@ -435,7 +504,9 @@
  * but if you introduce this plug-in, you will act in the order of 
  * attacker → defender → agile high character additional attack.
  * Actions targeted on your side or yourself will not act twice.
- * Also, if you enter <doubleAction: false> in the note of skill, it will not act twice.
+ * 
+ * New skill tags:
+ * <doubleAction:false>    unit will not act twice with that skill.
  * 
  * By changing srpgAgilityAffectsRatio you can change the probability of attack twice.
  * Set "Generate 100% if X times or more", while the probability changes according to the difference in agility.
@@ -451,132 +522,71 @@
  * @plugindesc マップ上でSRPG（タクティクス）方式の戦闘を実行します。
  * @author 神鏡学斗
  *
+ * @param BasicParam
+ * @desc 使用するスイッチ・変数の指定や併用するプラグインの設定など基本的なパラメータを設定します。
+ * @default 全体にかかわる基本的な機能
+ * 
+ * @param WithYEP_BattleEngineCore
+ * @parent BasicParam
+ * @desc YEP_BattleEngineCoreと併用する場合はtrueに設定してください。
+ * @type boolean
+ * @default false
+ * 
+ * @param WithCommunityBasic_CoreScript
+ * @parent BasicParam
+ * @desc アツマールで公開されているコミュニティ版コアスクリプトと併用する場合はtrueに設定してください。
+ * @type boolean
+ * @default false
+ * 
  * @param srpgTroopID
+ * @parent BasicParam
  * @desc SRPGコンバータが占有するトループIDです。SRPG戦闘では、このIDのトループが使用されます。
  * @type number
  * @min 1
  * @default 1
  *
  * @param srpgBattleSwitchID
+ * @parent BasicParam
  * @desc SRPG戦闘中であるかを格納するスイッチのＩＤを指定します。戦闘中はONになります。
  * @type switch
  * @default 1
  *
  * @param existActorVarID
+ * @parent BasicParam
  * @desc 存在しているアクターの人数が代入される変数のＩＤを指定します。存在している＝戦闘不能・隠れでない。
  * @type variable
  * @default 1
  *
  * @param existEnemyVarID
+ * @parent BasicParam
  * @desc 存在しているエネミーの人数が代入される変数のＩＤを指定します。存在している＝戦闘不能・隠れでない。
  * @type variable
  * @default 2
  *
  * @param turnVarID
+ * @parent BasicParam
  * @desc 経過ターン数が代入される変数のＩＤを指定します。最初のターンは『ターン１』です。
  * @type variable
  * @default 3
  *
  * @param activeEventID
+ * @parent BasicParam
  * @desc 行動中のユニットのイベントＩＤが代入される変数のＩＤを指定します。
  * @type variable
  * @default 4
  *
  * @param targetEventID
+ * @parent BasicParam
  * @desc 攻撃対象のユニットのイベントＩＤが代入される変数のＩＤを指定します。回復や補助も含みます。
  * @type variable
  * @default 5
  *
- * @param maxActorVarID
- * @desc 戦闘に参加するアクターの最大数を設定する変数のIDを指定します。０で無効。
- * @type variable
- * @default 0
+ * @param MapBattle
+ * @desc マップバトルに関係するパラメータです。
+ * @default マップバトルの設定
  *
- * @param defaultMove
- * @desc クラスやエネミーのメモで移動力が設定されていない場合、この値が適用されます。
- * @type number
- * @min 0
- * @default 4
- *
- * @param srpgBattleExpRate
- * @desc 敵を倒さなかった時に、設定された経験値の何割を入手するか。0 ～ 1.0で設定。
- * @type number
- * @decimals 2
- * @min 0
- * @max 1
- * @default 0.4
- *
- * @param srpgBattleExpRateForActors
- * @desc 味方に対して行動した時に、レベルアップに必要な経験値の何割を入手するか。0 ～ 1.0で設定。
- * @type number
- * @decimals 2
- * @min 0
- * @max 1
- * @default 0.1
- *
- * @param srpgBattleQuickLaunch
- * @desc 戦闘開始エフェクトを高速化します。falseだと通常と同じになります。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgActorCommandEquip
- * @desc アクターコマンドに『装備』を追加します。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgWinLoseConditionCommand
- * @desc メニューコマンドに『勝敗条件』を追加します。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgBattleEndAllHeal
- * @desc 戦闘終了後に自動的に味方全員を全回復します。falseだと自動回復しません。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgPredictionWindowMode
- * @desc 戦闘予測ウィンドウの表示を変更します。(1:フル / 2:攻撃名のみ / 3:表示なし)
- * @type select
- * @option フル
- * @value 1
- * @option 攻撃名のみ
- * @value 2
- * @option 表示なし
- * @value 3
- * @default 1
- *
- * @param srpgAutoBattleStateId
- * @desc オート戦闘が選ばれた時に付与するステートのIDです。1行動で解除・自動戦闘のステートを使います(0で無効化)。
- * @type state
- * @default 14
- *
- * @param srpgBestSearchRouteSize
- * @desc 攻撃可能な対象がいない時、最も近い敵までのルートを探索します。その索敵距離です（0で無効化）。
- * @type number
- * @min 0
- * @default 20
- *
- * @param srpgDamageDirectionChange
- * @desc 攻撃を受けた際に相手の方へ向きを補正します。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgSkipTargetForSelf
- * @desc 自分自身を対象とする行動では対象選択の処理をスキップします。(true / false)
- * @type boolean
- * @default true
- *
- * @param srpgRangeTerrainTag7
- * @desc 地形タグ７を射程が通らないタイルにします。(true / false)
- * @type boolean
- * @default true
- *
- * @param WithYEP_BattleEngineCore
- * @desc YEP_BattleEngineCoreと併用する場合はtrueに設定してください。
- * @type boolean
- * @default false
- * 
  * @param Use Map Battle
+ * @parent MapBattle
  * @desc マップバトルを使用するかどうか
  * @type select
  * @option Always
@@ -596,13 +606,91 @@
  * @default 0
  *
  * @param Animation Delay
+ * @parent MapBattle
  * @desc アニメーション～効果表示までの待ち時間(Map Battle)
  * -1に設定すると、アニメーションが完了するまで待つ
  * @type number
  * @min -1
- * @default 25
+ * @default -1
+ *
+ * @param BattleBasicParam
+ * @desc 移動力や経験値の入手割合など基本的な数値を設定します。
+ * @default 戦闘で使用する基本的数値
+ *
+ * @param defaultMove
+ * @parent BattleBasicParam
+ * @desc クラスやエネミーのメモで移動力が設定されていない場合、この値が適用されます。
+ * @type number
+ * @min 0
+ * @default 4
+ *
+ * @param srpgBattleExpRate
+ * @parent BattleBasicParam
+ * @desc 敵を倒さなかった時に、設定された経験値の何割を入手するか。0 ～ 1.0で設定。
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
+ * @default 0.4
+ *
+ * @param srpgBattleExpRateForActors
+ * @parent BattleBasicParam
+ * @desc 味方に対して行動した時に、レベルアップに必要な経験値の何割を入手するか。0 ～ 1.0で設定。
+ * @type number
+ * @decimals 2
+ * @min 0
+ * @max 1
+ * @default 0.1
  * 
+ * @param maxActorVarID
+ * @parent BattleBasicParam
+ * @desc 戦闘に参加するアクターの最大数を設定する変数のIDを指定します。０で無効。
+ * @type variable
+ * @default 0
+ *
+ * @param srpgAutoBattleStateId
+ * @parent BattleBasicParam
+ * @desc オート戦闘が選ばれた時に付与するステートのIDです。1行動で解除・自動戦闘のステートを使います(0で無効化)。
+ * @type state
+ * @default 14
+ *
+ * @param srpgBestSearchRouteSize
+ * @parent BattleBasicParam
+ * @desc 攻撃可能な対象がいない時、最も近い敵までのルートを探索します。その索敵距離です（0で無効化）。
+ * @type number
+ * @min 0
+ * @default 20
+ *
+ * @param BattleExtensionParam
+ * @desc 画面の演出やアクターコマンドの変更など拡張的な機能を設定します。
+ * @default 戦闘の拡張的な機能
+ * 
+ * @param srpgActorCommandEquip
+ * @parent BattleExtensionParam
+ * @desc アクターコマンドに『装備』を追加します。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgWinLoseConditionCommand
+ * @parent BattleExtensionParam
+ * @desc メニューコマンドに『勝敗条件』を追加します。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgPredictionWindowMode
+ * @parent BattleExtensionParam
+ * @desc 戦闘予測ウィンドウの表示を変更します。(1:フル / 2:攻撃名のみ / 3:表示なし)
+ * @type select
+ * @option フル
+ * @value 1
+ * @option 攻撃名のみ
+ * @value 2
+ * @option 表示なし
+ * @value 3
+ * @default 1
+ *
  * @param useAgiAttackPlus
+ * @parent BattleExtensionParam
  * @desc 敏捷が高い方が２回攻撃する仕組みを使用します。
  * @type boolean
  * @default false
@@ -614,59 +702,111 @@
  * @min 1
  * @default 2
  *
+ * @param srpgBattleQuickLaunch
+ * @parent BattleExtensionParam
+ * @desc 戦闘開始エフェクトを高速化します。falseだと通常と同じになります。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgBattleEndAllHeal
+ * @parent BattleExtensionParam
+ * @desc 戦闘終了後に自動的に味方全員を全回復します。falseだと自動回復しません。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgDamageDirectionChange
+ * @parent BattleExtensionParam
+ * @desc 攻撃を受けた際に相手の方へ向きを補正します。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgSkipTargetForSelf
+ * @parent BattleExtensionParam
+ * @desc 自分自身を対象とする行動では対象選択の処理をスキップします。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param srpgRangeTerrainTag7
+ * @parent BattleExtensionParam
+ * @desc 地形タグ７を射程が通らないタイルにします。(true / false)
+ * @type boolean
+ * @default true
+ *
+ * @param SRPGTerm
+ * @desc 『待機』や『移動力』などの用語を設定します。
+ * @default SRPG戦闘で使用する用語
+ *
  * @param enemyDefaultClass
+ * @parent SRPGTerm
  * @desc エネミーに職業（srpgClass）が設定されていない場合、ここの名前が表示されます。
  * @default エネミー
  *
  * @param textSrpgEquip
+ * @parent SRPGTerm
  * @desc 装備（武器）を表す用語です。ＳＲＰＧのステータスウィンドウで表示されます。
  * @default 装備
  *
+ * @param textSrpgNone
+ * @parent SRPGTerm
+ * @desc 装備が無い時に表示される用語
+ * @default なし
+ *
  * @param textSrpgMove
+ * @parent SRPGTerm
  * @desc 移動力を表す用語です。ＳＲＰＧのステータスウィンドウで表示されます。
  * @default 移動力
  *
  * @param textSrpgRange
+ * @parent SRPGTerm
  * @desc 攻撃射程を表す用語です。ＳＲＰＧのステータスウィンドウで表示されます。
  * @default 射程
  *
  * @param textSrpgWait
+ * @parent SRPGTerm
  * @desc 待機を表す用語です。アクターコマンドウィンドウで表示されます。
  * @default 待機
  *
  * @param textSrpgWinLoseCondition
+ * @parent SRPGTerm
  * @desc 勝敗条件を表す用語です。メニューコマンドウィンドウで表示されます。
  * @default 勝敗条件
  *
  * @param textSrpgWinCondition
+ * @parent SRPGTerm
  * @desc 勝利条件を表す用語です。勝敗条件ウィンドウで表示されます。
  * @default 勝利条件
  *
  * @param textSrpgLoseCondition
+ * @parent SRPGTerm
  * @desc 敗北条件を表す用語です。勝敗条件ウィンドウで表示されます。
  * @default 敗北条件
  *
  * @param textSrpgTurnEnd
+ * @parent SRPGTerm
  * @desc ターン終了を表す用語です。メニュー画面で表示されます。
  * @default ターン終了
  *
  * @param textSrpgAutoBattle
+ * @parent SRPGTerm
  * @desc オート戦闘を表す用語です。メニュー画面で表示されます。
  * @default オート戦闘
  *
  * @param textSrpgDamage
+ * @parent SRPGTerm
  * @desc 戦闘予測ウィンドウで表示するダメージの用語
  * @default ダメージ
  *
  * @param textSrpgHealing
+ * @parent SRPGTerm
  * @desc 戦闘予測ウィンドウで表示する回復の用語
  * @default 回復
  *
- * @param textSrpgNone
- * @desc 装備が無い時に表示される用語
- * @default なし
+ * @param SRPGFiles
+ * @desc 戦闘で使用する画像や効果音を指定します。
+ * @default SRPG戦闘で使用する画像やＳＥの設定
  *
  * @param srpgSet
+ * @parent SRPGFiles
  * @desc SRPG戦闘で使うカーソルなどのキャラクター画像のファイル名
  * @type file
  * @dir img/characters/
@@ -674,6 +814,7 @@
  * @default srpg_set
  *
  * @param rewardSound
+ * @parent SRPGFiles
  * @desc リザルトウィンドウで使用する効果音のファイル名
  * @type file
  * @dir audio/se/
@@ -681,6 +822,7 @@
  * @default Item3
  *
  * @param expSound
+ * @parent SRPGFiles
  * @desc リザルトウィンドウでレベルアップ時に使用する効果音のファイル名
  * @type file
  * @dir audio/se/
@@ -856,7 +998,9 @@
  * このプラグインオンにすると攻撃側→防御側→敏捷の高い方の追加攻撃という順番で
  * 行動するようになります。
  * 味方や自分自身を対象とする行動は2回行動を行いません。
- * また、スキルのメモに<doubleAction:false>と記入すると2回行動しなくなります。
+ * 
+ * 新規のスキルのメモ欄:
+ * <doubleAction:false>　　そのスキルでは2回行動しなくなります。
  * 
  * srpgAgilityAffectsRatioを変えることで2回攻撃の発生率を変えられます。
  * 「X倍以上で100%発生する」と設定し、その間は敏捷性の差に応じて確率が変わります。
@@ -914,6 +1058,7 @@
     var _srpgUseAgiAttackPlus = parameters['useAgiAttackPlus'] || 'true';
     var _srpgAgilityAffectsRatio = Number(parameters['srpgAgilityAffectsRatio'] || 2);
     var _AAPwithYEP_BattleEngineCore = parameters['WithYEP_BattleEngineCore'] || 'false';
+    var _AAPwithCommunityBasic_CoreScript = parameters['WithCommunityBasic_CoreScript'] || 'false';
 
     var _Game_Interpreter_pluginCommand =
             Game_Interpreter.prototype.pluginCommand;
@@ -3533,6 +3678,7 @@
             if (event.isStarting()) {
                 event.clearStartingFlag();
                 this._interpreter.setup(event.list(), event.eventId());
+                if (_AAPwithCommunityBasic_CoreScript == true) this._interpreter.setEventInfo(event.getEventInfo());
                 return true;
             }
         }
@@ -6849,6 +6995,11 @@ Window_WinLoseCondition.prototype.refresh = function() {
 		!$gameSystem.useMapBattle()) {
 			return;
 		}
+		
+		// return when event running
+		if ($gameMap.isEventRunning() == true) {
+            		return;
+        	}
 
 		// update map skills
 		if (!this.waitingForSkill() && !this._srpgBattleResultWindow.isChangeExp()) {
