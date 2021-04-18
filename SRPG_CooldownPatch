@@ -1,0 +1,70 @@
+//-----------------------------------------------------------------------------
+// copyright 2019 Doktor_Q all rights reserved.
+// Released under the MIT license.
+// http://opensource.org/licenses/mit-license.php
+//=============================================================================
+
+/*:
+ * @plugindesc SRPG Fix cooldown-related errors
+ * @author Dr. Q, Mikagami
+ *
+ * @help
+ * Fixes issues with cooldowns not updating correctly in SRPG mode
+ * add fix by Mikagami
+ */
+
+(function(){
+
+	// update cooldowns at the end of each turn
+	var _onTurnEnd = Game_Battler.prototype.onTurnEnd;
+	Game_Battler.prototype.onTurnEnd = function() {
+		_onTurnEnd.call(this);
+		if ($gameSystem.isSRPGMode()) {
+			this.updateCooldowns();
+			this.updateWarmups();
+		}
+	};
+
+	// don't update cooldown steps during SRPG battles
+	var _updateCooldownSteps = Game_BattlerBase.prototype.updateCooldownSteps;
+	Game_BattlerBase.prototype.updateCooldownSteps = function() {
+		if (!$gameSystem.isSRPGMode()) {
+			_updateCooldownSteps.call(this);
+		}
+	};
+
+	// disabled, so it won't result in more cooldown ticks
+	var _increaseTurn = Game_Troop.prototype.increaseTurn;
+	Game_Troop.prototype.increaseTurn = function() {
+		if ($gameSystem.isSRPGMode()) {
+			Yanfly.SCD.Game_Troop_increaseTurn.call(this);
+		} else {
+			_increaseTurn.call(this);
+		}
+	};
+
+	// When adding new actors or enemies, initalize their warmups
+	var _setEventToUnit = Game_System.prototype.setEventToUnit;
+	Game_System.prototype.setEventToUnit = function(event_id, type, data) {
+		_setEventToUnit.call(this, event_id, type, data);
+		if (type === 'enemy') {
+			data.onBattleStartCooldowns();
+		} else if (type === 'actor') {
+			$gameActors.actor(data).onBattleStartCooldowns();
+		}
+	};
+
+	// don't futz around with resetting cooldowns / warmups on battle start
+	var _Unit_onBattleStartCooldowns = Game_Unit.prototype.onBattleStartCooldowns;
+	Game_Unit.prototype.onBattleStartCooldowns = function() {
+		if (!$gameSystem.isSRPGMode()) {
+			_Unit_onBattleStartCooldowns.call(this);
+		}
+	};
+
+        // 戦闘終了後にcooldown, warmupの処理を行わない
+        Game_Unit.prototype.endBattleCooldowns = function() {
+          //
+        };
+
+})();
